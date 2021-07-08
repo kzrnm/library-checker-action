@@ -2,9 +2,11 @@ import * as core from '@actions/core'
 import {exec} from '@actions/exec'
 import * as github from './github'
 
-export async function checkout(): Promise<string> {
-  const repositoryURL = github.getRepositoryURL(core.getInput('repsitory-name'))
-  const commit = core.getInput('commit') || undefined
+export async function checkout(
+  repositoryName: string,
+  commit: string | undefined
+): Promise<string> {
+  const repositoryURL = github.getRepositoryURL(repositoryName)
   const libraryChecker = await github.checkoutRepository(repositoryURL, commit)
   const treePath = commit ? `/tree/${commit}` : ''
   core.info(`checkout ${repositoryURL}${treePath} to ${libraryChecker}`)
@@ -34,7 +36,10 @@ async function runSetupCommands(libraryCheckerPath: string): Promise<void> {
 
 async function run(): Promise<void> {
   try {
-    const libraryCheckerPath = await checkout()
+    const libraryCheckerPath = await checkout(
+      core.getInput('repsitory-name'),
+      core.getInput('commit') || undefined
+    )
     await runSetupCommands(libraryCheckerPath)
   } catch (error) {
     core.setFailed(error.message)

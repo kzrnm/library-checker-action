@@ -97,10 +97,9 @@ exports.checkout = void 0;
 const core = __importStar(__nccwpck_require__(186));
 const exec_1 = __nccwpck_require__(514);
 const github = __importStar(__nccwpck_require__(928));
-function checkout() {
+function checkout(repositoryName, commit) {
     return __awaiter(this, void 0, void 0, function* () {
-        const repositoryURL = github.getRepositoryURL(core.getInput('repsitory-name'));
-        const commit = core.getInput('commit') || undefined;
+        const repositoryURL = github.getRepositoryURL(repositoryName);
         const libraryChecker = yield github.checkoutRepository(repositoryURL, commit);
         const treePath = commit ? `/tree/${commit}` : '';
         core.info(`checkout ${repositoryURL}${treePath} to ${libraryChecker}`);
@@ -129,7 +128,7 @@ function runSetupCommands(libraryCheckerPath) {
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const libraryCheckerPath = yield checkout();
+            const libraryCheckerPath = yield checkout(core.getInput('repsitory-name'), core.getInput('commit') || undefined);
             yield runSetupCommands(libraryCheckerPath);
         }
         catch (error) {

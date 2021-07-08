@@ -9,9 +9,8 @@ describe('checkout library checker', () => {
   })
 
   test('default', async () => {
-    getMockedInput({})
     const mockedLogger = getMockedLogger()
-    await checkout()
+    await checkout('', '')
     expect(mockedLogger).toBeCalledTimes(1)
     expect(mockedLogger).toBeCalledWith(
       'info',
@@ -19,11 +18,8 @@ describe('checkout library checker', () => {
     )
   })
   test('with repo name', async () => {
-    getMockedInput({
-      'repsitory-name': 'repo-owner/repo-repo'
-    })
     const mockedLogger = getMockedLogger()
-    await checkout()
+    await checkout('repo-owner/repo-repo', '')
     expect(mockedLogger).toBeCalledTimes(1)
     expect(mockedLogger).toBeCalledWith(
       'info',
@@ -31,12 +27,8 @@ describe('checkout library checker', () => {
     )
   })
   test('with repo name and branch', async () => {
-    getMockedInput({
-      'repsitory-name': 'repo-owner/repo-repo',
-      commit: 'main'
-    })
     const mockedLogger = getMockedLogger()
-    await checkout()
+    await checkout('repo-owner/repo-repo', 'main')
     expect(mockedLogger).toBeCalledTimes(1)
     expect(mockedLogger).toBeCalledWith(
       'info',
