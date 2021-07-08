@@ -1,5 +1,5 @@
 import * as core from '@actions/core'
-import {exec, getExecOutput} from '@actions/exec'
+import {exec} from '@actions/exec'
 import * as github from './github'
 
 export async function checkout(): Promise<string> {
@@ -21,24 +21,14 @@ async function runSetupCommands(libraryCheckerPath: string): Promise<void> {
       ['install', '--user', '-r', 'requirements.txt'],
       execOpts
     )
-    switch (process.platform) {
-      case 'win32':
-      case 'darwin':
-        break
-      default:
-        await exec('prlimit', [
-          '--stack=unlimited',
-          '--pid',
-          process.pid.toString()
-        ]) // ulimit -s unlimited
-        break
+    if (process.platform !== 'win32' && process.platform !== 'darwin') {
+      await exec('prlimit', [
+        '--stack=unlimited',
+        '--pid',
+        process.pid.toString()
+      ]) // ulimit -s unlimited
     }
-    const genOut = await getExecOutput(
-      'python3',
-      ['ci_generate.py', '--print-version'],
-      execOpts
-    )
-    core.setOutput('ci_generate', JSON.parse(genOut.stdout))
+    await exec('python3', ['ci_generate.py', '--print-version'], execOpts)
   })
 }
 

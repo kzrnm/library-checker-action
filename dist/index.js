@@ -115,20 +115,14 @@ function runSetupCommands(libraryCheckerPath) {
                 cwd: libraryCheckerPath
             };
             yield exec_1.exec('pip3', ['install', '--user', '-r', 'requirements.txt'], execOpts);
-            switch (process.platform) {
-                case 'win32':
-                case 'darwin':
-                    break;
-                default:
-                    yield exec_1.exec('prlimit', [
-                        '--stack=unlimited',
-                        '--pid',
-                        process.pid.toString()
-                    ]); // ulimit -s unlimited
-                    break;
+            if (process.platform !== 'win32' && process.platform !== 'darwin') {
+                yield exec_1.exec('prlimit', [
+                    '--stack=unlimited',
+                    '--pid',
+                    process.pid.toString()
+                ]); // ulimit -s unlimited
             }
-            const genOut = yield exec_1.getExecOutput('python3', ['ci_generate.py', '--print-version'], execOpts);
-            core.setOutput('ci_generate', JSON.parse(genOut.stdout));
+            yield exec_1.exec('python3', ['ci_generate.py', '--print-version'], execOpts);
         }));
     });
 }
