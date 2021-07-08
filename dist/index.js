@@ -96,24 +96,34 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.checkout = void 0;
 const core = __importStar(__nccwpck_require__(186));
 const exec_1 = __nccwpck_require__(514);
-const github_1 = __nccwpck_require__(928);
+const github = __importStar(__nccwpck_require__(928));
 function checkout() {
     return __awaiter(this, void 0, void 0, function* () {
-        const repositoryURL = github_1.getRepositoryURL(core.getInput('repsitory-name'));
+        const repositoryURL = github.getRepositoryURL(core.getInput('repsitory-name'));
         const commit = core.getInput('commit') || undefined;
-        const libraryChecker = yield github_1.checkoutRepository(repositoryURL, commit);
+        const libraryChecker = yield github.checkoutRepository(repositoryURL, commit);
         const treePath = commit ? `/tree/${commit}` : '';
         core.info(`checkout ${repositoryURL}${treePath} to ${libraryChecker}`);
         return libraryChecker;
     });
 }
 exports.checkout = checkout;
-function pipInstall(libraryCheckerPath) {
+function runSetupCommands(libraryCheckerPath) {
     return __awaiter(this, void 0, void 0, function* () {
-        yield core.group('pip install', () => __awaiter(this, void 0, void 0, function* () {
-            yield exec_1.exec('pip3', ['install', '--user', '-r', 'requirements.txt'], {
+        yield core.group('setup Library Checker Problems', () => __awaiter(this, void 0, void 0, function* () {
+            const execOpts = {
                 cwd: libraryCheckerPath
-            });
+            };
+            yield exec_1.exec('pip3', ['install', '--user', '-r', 'requirements.txt'], execOpts);
+            switch (process.platform) {
+                case 'win32':
+                case 'darwin':
+                    break;
+                default:
+                    yield exec_1.exec('ulimit', ['-s', 'unlimited']);
+                    break;
+            }
+            yield exec_1.exec('python3', ['ci_generate.py', '--print-version'], execOpts);
         }));
     });
 }
@@ -121,7 +131,7 @@ function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const libraryCheckerPath = yield checkout();
-            yield pipInstall(libraryCheckerPath);
+            yield runSetupCommands(libraryCheckerPath);
         }
         catch (error) {
             core.setFailed(error.message);
