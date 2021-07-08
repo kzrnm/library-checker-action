@@ -19,7 +19,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.checkoutRepository = void 0;
+exports.getRepositoryURL = exports.checkoutRepository = void 0;
 const os_1 = __importDefault(__nccwpck_require__(87));
 const path_1 = __importDefault(__nccwpck_require__(622));
 const fs_1 = __importDefault(__nccwpck_require__(747));
@@ -28,9 +28,8 @@ const git_clone_1 = __importDefault(__nccwpck_require__(62));
  * Checkout repository
  * @returns directory path of the repository
  */
-function checkoutRepository(repositoryName, commit) {
+function checkoutRepository(repositoryURL, commit) {
     return __awaiter(this, void 0, void 0, function* () {
-        const repositoryURL = `https://github.com/${repositoryName}`;
         const dir = yield fs_1.default.promises.mkdtemp(path_1.default.join(os_1.default.tmpdir(), 'library-checker-action.'));
         return new Promise((resolve, reject) => {
             git_clone_1.default(repositoryURL, dir, { checkout: commit, shallow: true }, e => {
@@ -43,6 +42,19 @@ function checkoutRepository(repositoryName, commit) {
     });
 }
 exports.checkoutRepository = checkoutRepository;
+/**
+ *
+ * @param nameOrUrl repository name or url
+ * @returns repository full path default: https://github.com/yosupo06/library-checker-problems
+ */
+function getRepositoryURL(nameOrUrl) {
+    if (!nameOrUrl)
+        return 'https://github.com/yosupo06/library-checker-problems';
+    if (nameOrUrl.startsWith('https://') || nameOrUrl.startsWith('git@'))
+        return nameOrUrl;
+    return `https://github.com/${nameOrUrl}`;
+}
+exports.getRepositoryURL = getRepositoryURL;
 
 
 /***/ }),
@@ -81,21 +93,32 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.checkout = void 0;
 const core = __importStar(__nccwpck_require__(186));
 const github_1 = __nccwpck_require__(928);
+function checkout() {
+    return __awaiter(this, void 0, void 0, function* () {
+        const repositoryURL = github_1.getRepositoryURL(core.getInput('repsitory-name'));
+        const commit = core.getInput('commit') || undefined;
+        const libraryChecker = yield github_1.checkoutRepository(repositoryURL, commit);
+        const treePath = commit ? `/tree/${commit}` : '';
+        core.info(`checkout ${repositoryURL}${treePath} to ${libraryChecker}`);
+    });
+}
+exports.checkout = checkout;
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
-        const repositoryName = 'yosupo06/library-checker-problems';
         try {
-            const libraryChecker = yield github_1.checkoutRepository(repositoryName);
-            core.debug(`checkout ${repositoryName} to ${libraryChecker}`);
+            yield checkout();
         }
         catch (error) {
             core.setFailed(error.message);
         }
     });
 }
-run();
+if (require.main === require.cache[eval('__filename')]) {
+    run();
+}
 
 
 /***/ }),

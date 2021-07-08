@@ -3,20 +3,16 @@ import fs from 'fs'
 jest.spyOn(fs.promises, 'mkdtemp').mockImplementation((prefix, opts) => {
   return Promise.resolve(prefix + 'ABCDEFG')
 })
-jest.mock('git-clone', () => ({
-  __esModule: true,
-  default: jest
-    .fn()
-    .mockImplementation(
-      (repo: string, targetPath: string, opts: any, cb: (e?: Error) => {}) => {
-        cb()
-      }
-    )
-}))
+jest.mock('git-clone')
+const clone = require('git-clone')
+clone.mockImplementation(
+  (repo: string, targetPath: string, opts: any, cb: (e?: Error) => {}) => {
+    cb()
+  }
+)
 
 describe('checkout repository', () => {
   afterEach(() => {
-    const clone = require('git-clone').default as jest.Mock
     clone.mockClear()
   })
 
@@ -26,7 +22,6 @@ describe('checkout repository', () => {
     )
     expect(dir).toMatch(/.*library-checker-action\.ABCDEFG$/)
 
-    const clone = require('git-clone').default as jest.Mock
     expect(clone).toBeCalledTimes(1)
     expect(clone).toBeCalledWith(
       'https://github.com/naminodarie/library-checker-action',
@@ -43,7 +38,6 @@ describe('checkout repository', () => {
     )
     expect(dir).toMatch(/.*library-checker-action\.ABCDEFG$/)
 
-    const clone = require('git-clone').default as jest.Mock
     expect(clone).toBeCalledTimes(1)
     expect(clone).toBeCalledWith(
       'https://github.com/naminodarie/library-checker-action',

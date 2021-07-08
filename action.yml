@@ -9,7 +9,6 @@ inputs:
   commit:
     required: false
     description: "revision/branch/tag"
-    default: "HEAD"
 # outputs: 
 
 # https://actions-cool.github.io/github-action-branding/
