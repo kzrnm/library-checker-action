@@ -120,7 +120,11 @@ function runSetupCommands(libraryCheckerPath) {
                 case 'darwin':
                     break;
                 default:
-                    yield exec_1.exec('ulimit', ['-s', 'unlimited']);
+                    yield exec_1.exec('prlimit', [
+                        '--stack=unlimited',
+                        '--pid',
+                        process.pid.toString()
+                    ]); // ulimit -s unlimited
                     break;
             }
             yield exec_1.exec('python3', ['ci_generate.py', '--print-version'], execOpts);

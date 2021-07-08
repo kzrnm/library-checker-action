@@ -26,7 +26,11 @@ async function runSetupCommands(libraryCheckerPath: string): Promise<void> {
       case 'darwin':
         break
       default:
-        await exec('ulimit', ['-s', 'unlimited'])
+        await exec('prlimit', [
+          '--stack=unlimited',
+          '--pid',
+          process.pid.toString()
+        ]) // ulimit -s unlimited
         break
     }
     await exec('python3', ['ci_generate.py', '--print-version'], execOpts)
