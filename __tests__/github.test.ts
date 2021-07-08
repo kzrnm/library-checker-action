@@ -1,8 +1,5 @@
 import {checkoutRepository, getRepositoryURL} from '../src/github'
 import fs from 'fs'
-jest.spyOn(fs.promises, 'mkdtemp').mockImplementation((prefix, opts) => {
-  return Promise.resolve(prefix + 'ABCDEFG')
-})
 jest.mock('git-clone')
 const clone = require('git-clone')
 clone.mockImplementation(
@@ -12,8 +9,11 @@ clone.mockImplementation(
 )
 
 describe('checkout repository', () => {
-  afterEach(() => {
+  beforeEach(() => {
     clone.mockClear()
+    jest.spyOn(fs.promises, 'mkdtemp').mockImplementation((prefix, opts) => {
+      return Promise.resolve(prefix + 'ABCDEFG')
+    })
   })
 
   test('without commit hash', async () => {

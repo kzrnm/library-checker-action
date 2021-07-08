@@ -1,6 +1,63 @@
 require('./sourcemap-register.js');/******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
+/***/ 524:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.listProblems = void 0;
+const core = __importStar(__nccwpck_require__(186));
+const exec_1 = __nccwpck_require__(514);
+function listProblems(command) {
+    return __awaiter(this, void 0, void 0, function* () {
+        if (!command) {
+            core.info('Check all problems');
+            return [];
+        }
+        const execOutput = yield exec_1.getExecOutput(command, undefined, { silent: true });
+        const problems = execOutput.stdout.split(/\s+/).filter(s => s.length > 0);
+        if (problems.length > 0)
+            core.info(`problems: ${problems.join(', ')}`);
+        else
+            core.warning('problems not found. Check all problems');
+        return problems;
+    });
+}
+exports.listProblems = listProblems;
+
+
+/***/ }),
+
 /***/ 928:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -59,6 +116,71 @@ exports.getRepositoryURL = getRepositoryURL;
 
 /***/ }),
 
+/***/ 245:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.LibraryChecker = void 0;
+const core = __importStar(__nccwpck_require__(186));
+const exec_1 = __nccwpck_require__(514);
+class LibraryChecker {
+    constructor(libraryCheckerPath) {
+        this.libraryCheckerPath = libraryCheckerPath;
+        this.execOpts = { cwd: libraryCheckerPath };
+    }
+    /**
+     * setup Library Checker
+     */
+    setup() {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield core.group('setup Library Checker Problems', () => __awaiter(this, void 0, void 0, function* () {
+                yield exec_1.exec('pip3', ['install', '--user', '-r', 'requirements.txt'], this.execOpts);
+                if (process.platform !== 'win32' && process.platform !== 'darwin') {
+                    yield exec_1.exec('prlimit', [
+                        '--stack=unlimited',
+                        '--pid',
+                        process.pid.toString()
+                    ]); // ulimit -s unlimited
+                }
+            }));
+        });
+    }
+}
+exports.LibraryChecker = LibraryChecker;
+
+
+/***/ }),
+
 /***/ 109:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -97,6 +219,12 @@ exports.checkout = void 0;
 const core = __importStar(__nccwpck_require__(186));
 const exec_1 = __nccwpck_require__(514);
 const github = __importStar(__nccwpck_require__(928));
+const command = __importStar(__nccwpck_require__(524));
+const library_checker_1 = __nccwpck_require__(245);
+/**
+ * Checkout repository
+ * @returns Library Checker path
+ */
 function checkout(repositoryName, commit) {
     return __awaiter(this, void 0, void 0, function* () {
         const repositoryURL = github.getRepositoryURL(repositoryName);
@@ -107,42 +235,16 @@ function checkout(repositoryName, commit) {
     });
 }
 exports.checkout = checkout;
-function runSetupCommands(libraryCheckerPath) {
-    return __awaiter(this, void 0, void 0, function* () {
-        yield core.group('setup Library Checker Problems', () => __awaiter(this, void 0, void 0, function* () {
-            const execOpts = {
-                cwd: libraryCheckerPath
-            };
-            yield exec_1.exec('pip3', ['install', '--user', '-r', 'requirements.txt'], execOpts);
-            if (process.platform !== 'win32' && process.platform !== 'darwin') {
-                yield exec_1.exec('prlimit', [
-                    '--stack=unlimited',
-                    '--pid',
-                    process.pid.toString()
-                ]); // ulimit -s unlimited
-            }
-            yield exec_1.exec('python3', ['ci_generate.py', '--print-version'], execOpts);
-        }));
-    });
-}
-function listProblems(command) {
-    return __awaiter(this, void 0, void 0, function* () {
-        if (!command)
-            return [];
-        const execOutput = yield exec_1.getExecOutput(command, undefined, { silent: true });
-        return execOutput.stdout.split(/\s+/).filter(s => s.length > 0);
-    });
-}
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const libraryCheckerPath = yield checkout(core.getInput('repsitory-name'), core.getInput('commit') || undefined);
-            yield runSetupCommands(libraryCheckerPath);
-            const problems = yield listProblems(core.getInput('list-problems'));
-            if (problems.length > 0)
-                core.info(`problems: ${problems.join(', ')}`);
-            else
-                core.info('check all problems');
+            const libraryChecker = new library_checker_1.LibraryChecker(libraryCheckerPath);
+            yield libraryChecker.setup();
+            yield exec_1.exec('python3', ['ci_generate.py', '--print-version'], {
+                cwd: libraryCheckerPath
+            });
+            yield command.listProblems(core.getInput('list-problems'));
         }
         catch (error) {
             core.setFailed(error.message);
