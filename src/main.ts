@@ -1,16 +1,12 @@
 import * as core from '@actions/core'
-import {wait} from './wait'
+import {checkoutRepository} from './github'
 
 async function run(): Promise<void> {
+  const repositoryName = 'yosupo06/library-checker-problems'
   try {
-    const ms: string = core.getInput('milliseconds')
-    core.debug(`Waiting ${ms} milliseconds ...`) // debug is only output if you set the secret `ACTIONS_RUNNER_DEBUG` to true
+    const libraryChecker = await checkoutRepository(repositoryName)
 
-    core.debug(new Date().toTimeString())
-    await wait(parseInt(ms, 10))
-    core.debug(new Date().toTimeString())
-
-    core.setOutput('time', new Date().toTimeString())
+    core.debug(`checkout ${repositoryName} to ${libraryChecker}`)
   } catch (error) {
     core.setFailed(error.message)
   }

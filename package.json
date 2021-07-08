@@ -6,9 +6,9 @@
   "main": "lib/main.js",
   "scripts": {
     "build": "tsc",
-    "lint": "eslint **/*.ts",
-    "format-check": "eslint **/*.ts",
-    "format": "eslint --fix src/**/*.ts",
+    "format": "prettier --write **/*.ts",
+    "format-check": "prettier --check **/*.ts",
+    "lint": "eslint src/**/*.ts",
     "package": "ncc build --source-map --license licenses.txt",
     "test": "jest",
     "lint-staged": "lint-staged",
@@ -16,11 +16,11 @@
     "prepare": "husky install"
   },
   "lint-staged": {
-    "*.ts": "eslint"
+    "*.ts": "format"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/naminodarie/library-checker-actions"
+    "url": "git+https://github.com/naminodarie/library-checker-action"
   },
   "keywords": [
     "actions",

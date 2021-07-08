@@ -1,11 +1,17 @@
-name: 'Your name here'
-description: 'Provide a description here'
-author: 'Your name or organization here'
+name: "Library Checker Action"
+description: "This action runs yosupo06/library-checker-problems"
+author: "naminodarie"
 inputs:
-  milliseconds: # change this
-    required: true
-    description: 'input description here'
-    default: 'default value if applicable'
+  commit:
+    required: false
+    description: "revision/branch/tag"
+    default: "HEAD"
+# outputs: 
+
+# https://actions-cool.github.io/github-action-branding/
+branding:
+  icon: 'rotate-cw'
+  color: 'red'
 runs:
-  using: 'node12'
-  main: 'dist/index.js'
+  using: "node12"
+  main: "dist/index.js"
