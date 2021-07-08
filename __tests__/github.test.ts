@@ -1,4 +1,4 @@
-import {checkoutRepository} from '../src/github'
+import {checkoutRepository, getRepositoryURL} from '../src/github'
 import fs from 'fs'
 jest.spyOn(fs.promises, 'mkdtemp').mockImplementation((prefix, opts) => {
   return Promise.resolve(prefix + 'ABCDEFG')
@@ -21,7 +21,9 @@ describe('checkout repository', () => {
   })
 
   test('without commit hash', async () => {
-    const dir = await checkoutRepository('naminodarie/library-checker-action')
+    const dir = await checkoutRepository(
+      'https://github.com/naminodarie/library-checker-action'
+    )
     expect(dir).toMatch(/.*library-checker-action\.ABCDEFG$/)
 
     const clone = require('git-clone').default as jest.Mock
@@ -36,7 +38,7 @@ describe('checkout repository', () => {
 
   test('with commit hash', async () => {
     const dir = await checkoutRepository(
-      'naminodarie/library-checker-action',
+      'https://github.com/naminodarie/library-checker-action',
       'commit-hash'
     )
     expect(dir).toMatch(/.*library-checker-action\.ABCDEFG$/)
@@ -49,5 +51,25 @@ describe('checkout repository', () => {
       {checkout: 'commit-hash', shallow: true},
       expect.any(Function)
     )
+  })
+})
+
+describe('get repository URL', () => {
+  test.each([
+    ['', 'https://github.com/yosupo06/library-checker-problems'],
+    [
+      'https://github.com/naminodarie/library-checker-action',
+      'https://github.com/naminodarie/library-checker-action'
+    ],
+    [
+      'naminodarie/library-checker-action',
+      'https://github.com/naminodarie/library-checker-action'
+    ],
+    [
+      'git@github.com/naminodarie/library-checker-action',
+      'git@github.com/naminodarie/library-checker-action'
+    ]
+  ])('getRepositoryURL(%s) ==  %s', (nameOrUrl, expected) => {
+    expect(getRepositoryURL(nameOrUrl)).toBe(expected)
   })
 })

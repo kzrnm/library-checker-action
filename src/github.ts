@@ -12,10 +12,9 @@ export interface CheckoutOptions {
  * @returns directory path of the repository
  */
 export async function checkoutRepository(
-  repositoryName: string,
+  repositoryURL: string,
   commit?: string
 ): Promise<string> {
-  const repositoryURL = `https://github.com/${repositoryName}`
   const dir = await fs.promises.mkdtemp(
     path.join(os.tmpdir(), 'library-checker-action.')
   )
@@ -27,4 +26,16 @@ export async function checkoutRepository(
       resolve(dir)
     })
   })
+}
+
+/**
+ *
+ * @param nameOrUrl repository name or url
+ * @returns repository full path default: https://github.com/yosupo06/library-checker-problems
+ */
+export function getRepositoryURL(nameOrUrl: string): string {
+  if (!nameOrUrl) return 'https://github.com/yosupo06/library-checker-problems'
+  if (nameOrUrl.startsWith('https://') || nameOrUrl.startsWith('git@'))
+    return nameOrUrl
+  return `https://github.com/${nameOrUrl}`
 }

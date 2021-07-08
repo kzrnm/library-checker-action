@@ -1,12 +1,11 @@
 import * as core from '@actions/core'
-import {checkoutRepository} from './github'
+import {checkoutRepository, getRepositoryURL} from './github'
 
 async function run(): Promise<void> {
-  const repositoryName = 'yosupo06/library-checker-problems'
   try {
-    const libraryChecker = await checkoutRepository(repositoryName)
-
-    core.debug(`checkout ${repositoryName} to ${libraryChecker}`)
+    const repositoryURL = getRepositoryURL(core.getInput('repsitory-name'))
+    const libraryChecker = await checkoutRepository(repositoryURL)
+    core.info(`checkout ${repositoryURL} to ${libraryChecker}`)
   } catch (error) {
     core.setFailed(error.message)
   }
