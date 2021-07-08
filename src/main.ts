@@ -1,5 +1,5 @@
 import * as core from '@actions/core'
-import {exec} from '@actions/exec'
+import {exec, getExecOutput} from '@actions/exec'
 import * as github from './github'
 
 export async function checkout(): Promise<string> {
@@ -33,7 +33,12 @@ async function runSetupCommands(libraryCheckerPath: string): Promise<void> {
         ]) // ulimit -s unlimited
         break
     }
-    await exec('python3', ['ci_generate.py', '--print-version'], execOpts)
+    const genOut = await getExecOutput(
+      'python3',
+      ['ci_generate.py', '--print-version'],
+      execOpts
+    )
+    core.setOutput('ci_generate', JSON.parse(genOut.stdout))
   })
 }
 

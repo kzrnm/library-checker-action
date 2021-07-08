@@ -127,7 +127,8 @@ function runSetupCommands(libraryCheckerPath) {
                     ]); // ulimit -s unlimited
                     break;
             }
-            yield exec_1.exec('python3', ['ci_generate.py', '--print-version'], execOpts);
+            const genOut = yield exec_1.getExecOutput('python3', ['ci_generate.py', '--print-version'], execOpts);
+            core.setOutput('ci_generate', JSON.parse(genOut.stdout));
         }));
     });
 }
