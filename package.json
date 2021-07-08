@@ -13,7 +13,7 @@
     "package": "ncc build --source-map --license licenses.txt",
     "test": "jest",
     "lint-staged": "lint-staged",
-    "all": "npm run build && npm run format && npm run lint && npm run package && npm test",
+    "all": "npm run build && npm run format && npm run lint-fix && npm run package && npm test",
     "prepare": "husky install"
   },
   "lint-staged": {

@@ -125,11 +125,24 @@ function runSetupCommands(libraryCheckerPath) {
         }));
     });
 }
+function listProblems(command) {
+    return __awaiter(this, void 0, void 0, function* () {
+        if (!command)
+            return [];
+        const execOutput = yield exec_1.getExecOutput(command, undefined, { silent: true });
+        return execOutput.stdout.split(/\s+/).filter(s => s.length > 0);
+    });
+}
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const libraryCheckerPath = yield checkout(core.getInput('repsitory-name'), core.getInput('commit') || undefined);
             yield runSetupCommands(libraryCheckerPath);
+            const problems = yield listProblems(core.getInput('list-problems'));
+            if (problems.length > 0)
+                core.info(`problems: ${problems.join(', ')}`);
+            else
+                core.info('check all problems');
         }
         catch (error) {
             core.setFailed(error.message);

@@ -1,5 +1,5 @@
 import * as core from '@actions/core'
-import {exec} from '@actions/exec'
+import {exec, getExecOutput} from '@actions/exec'
 import * as github from './github'
 
 export async function checkout(
@@ -34,6 +34,12 @@ async function runSetupCommands(libraryCheckerPath: string): Promise<void> {
   })
 }
 
+async function listProblems(command: string): Promise<string[]> {
+  if (!command) return []
+  const execOutput = await getExecOutput(command, undefined, {silent: true})
+  return execOutput.stdout.split(/\s+/).filter(s => s.length > 0)
+}
+
 async function run(): Promise<void> {
   try {
     const libraryCheckerPath = await checkout(
@@ -41,6 +47,10 @@ async function run(): Promise<void> {
       core.getInput('commit') || undefined
     )
     await runSetupCommands(libraryCheckerPath)
+
+    const problems = await listProblems(core.getInput('list-problems'))
+    if (problems.length > 0) core.info(`problems: ${problems.join(', ')}`)
+    else core.info('check all problems')
   } catch (error) {
     core.setFailed(error.message)
   }
