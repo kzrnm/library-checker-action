@@ -75,8 +75,10 @@ class GitRepositoryCloner {
      * @returns directory of the repository
      */
     checkoutRepository() {
+        var _a;
         return __awaiter(this, void 0, void 0, function* () {
-            const dir = path_1.default.join(process.cwd(), 'library-checker-action');
+            const root = (_a = process.env['GITHUB_WORKSPACE']) !== null && _a !== void 0 ? _a : process.cwd();
+            const dir = path_1.default.join(root, 'library-checker-action');
             return new Promise((resolve, reject) => {
                 git_clone_1.default(this.repositoryUrl, dir, { checkout: this.commit, shallow: true }, e => {
                     if (e) {
@@ -138,6 +140,8 @@ const path_1 = __importDefault(__nccwpck_require__(5622));
 class LibraryChecker {
     constructor(libraryCheckerPath) {
         this.libraryCheckerPath = libraryCheckerPath;
+        const jobId = process.env['GITHUB_JOB'];
+        this.cacheKey = `${LibraryChecker.CACHE_KEY_PREFIX}${jobId}`;
         this.execOpts = { cwd: libraryCheckerPath };
     }
     /**
@@ -146,7 +150,7 @@ class LibraryChecker {
     setup() {
         return __awaiter(this, void 0, void 0, function* () {
             yield core.group('setup Library Checker Problems', () => __awaiter(this, void 0, void 0, function* () {
-                const cacheKey = yield cache.restoreCache([path_1.default.join(this.libraryCheckerPath, '**', 'in')], LibraryChecker.CACHE_KEY);
+                const cacheKey = yield cache.restoreCache([path_1.default.join(this.libraryCheckerPath, '**', 'in')], this.cacheKey, [LibraryChecker.CACHE_KEY_PREFIX]);
                 if (cacheKey === undefined) {
                     core.info(`Cache is not found`);
                 }
@@ -187,7 +191,7 @@ class LibraryChecker {
             yield core.group('setup Library Checker Problems', () => __awaiter(this, void 0, void 0, function* () {
                 yield exec_1.exec('python3', ['generate.py', '-p', ...problemNames], this.execOpts);
                 try {
-                    const cacheId = yield cache.saveCache([path_1.default.join(this.libraryCheckerPath, '**', 'in')], LibraryChecker.CACHE_KEY);
+                    const cacheId = yield cache.saveCache([path_1.default.join(this.libraryCheckerPath, '**', 'in')], this.cacheKey);
                     core.info(`Cache problems. id = ${cacheId}`);
                 }
                 catch (e) {
@@ -198,7 +202,7 @@ class LibraryChecker {
     }
 }
 exports.LibraryChecker = LibraryChecker;
-LibraryChecker.CACHE_KEY = 'LibraryCheckerAction-cache-key';
+LibraryChecker.CACHE_KEY_PREFIX = 'LibraryCheckerAction-cache-';
 
 
 /***/ }),

@@ -3,12 +3,15 @@ import * as core from '@actions/core'
 import {exec, getExecOutput, ExecOptions} from '@actions/exec'
 import path from 'path'
 export class LibraryChecker {
-  private static readonly CACHE_KEY = 'LibraryCheckerAction-cache-key'
+  private static CACHE_KEY_PREFIX = 'LibraryCheckerAction-cache-'
+  private readonly cacheKey: string
   private readonly libraryCheckerPath: string
   private execOpts: ExecOptions
 
   constructor(libraryCheckerPath: string) {
     this.libraryCheckerPath = libraryCheckerPath
+    const jobId = process.env['GITHUB_JOB']
+    this.cacheKey = `${LibraryChecker.CACHE_KEY_PREFIX}${jobId}`
     this.execOpts = {cwd: libraryCheckerPath}
   }
 
@@ -19,7 +22,8 @@ export class LibraryChecker {
     await core.group('setup Library Checker Problems', async () => {
       const cacheKey = await cache.restoreCache(
         [path.join(this.libraryCheckerPath, '**', 'in')],
-        LibraryChecker.CACHE_KEY
+        this.cacheKey,
+        [LibraryChecker.CACHE_KEY_PREFIX]
       )
       if (cacheKey === undefined) {
         core.info(`Cache is not found`)
@@ -73,7 +77,7 @@ export class LibraryChecker {
       try {
         const cacheId = await cache.saveCache(
           [path.join(this.libraryCheckerPath, '**', 'in')],
-          LibraryChecker.CACHE_KEY
+          this.cacheKey
         )
         core.info(`Cache problems. id = ${cacheId}`)
       } catch (e) {

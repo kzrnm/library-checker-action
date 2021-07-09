@@ -27,7 +27,8 @@ export class GitRepositoryCloner {
    * @returns directory of the repository
    */
   async checkoutRepository(): Promise<string> {
-    const dir = path.join(process.cwd(), 'library-checker-action')
+    const root = process.env['GITHUB_WORKSPACE'] ?? process.cwd()
+    const dir = path.join(root, 'library-checker-action')
     return new Promise((resolve, reject) => {
       clone(
         this.repositoryUrl,
