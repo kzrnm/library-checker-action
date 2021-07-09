@@ -4,6 +4,19 @@ import path from 'path'
 import {LibraryChecker} from '../src/libraryChecker'
 import {getMockedLogger} from './util'
 
+test('generate', async () => {
+  const execMock = jest.spyOn(exec, 'exec').mockResolvedValueOnce(0)
+  getMockedLogger()
+  const libraryChecker = new LibraryChecker(__dirname)
+  await libraryChecker.generate(['aplusb', 'unionfind'])
+  expect(execMock).toBeCalledTimes(1)
+  expect(execMock).toBeCalledWith(
+    'python3',
+    ['generate.py', '-p', 'aplusb', 'unionfind'],
+    {cwd: __dirname}
+  )
+})
+
 test('problems', async () => {
   const versions = await fs.promises.readFile(
     path.join(__dirname, 'versions.json')
@@ -15,7 +28,7 @@ test('problems', async () => {
   })
   getMockedLogger()
 
-  const libraryChecker = new LibraryChecker(process.cwd())
+  const libraryChecker = new LibraryChecker(__dirname)
   expect(libraryChecker.problems()).resolves.toStrictEqual([
     {
       name: 'aplusb',

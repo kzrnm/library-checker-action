@@ -153,6 +153,9 @@ class LibraryChecker {
             }));
         });
     }
+    /**
+     * @returns Library Checker problems
+     */
     problems() {
         return __awaiter(this, void 0, void 0, function* () {
             const versions = yield (() => __awaiter(this, void 0, void 0, function* () {
@@ -162,6 +165,16 @@ class LibraryChecker {
             return Object.entries(JSON.parse(versions)).map(t => ({
                 name: t[0],
                 version: t[1]
+            }));
+        });
+    }
+    /**
+     * generate problems
+     */
+    generate(problemNames) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield core.group('setup Library Checker Problems', () => __awaiter(this, void 0, void 0, function* () {
+                yield exec_1.exec('python3', ['generate.py', '-p', ...problemNames], this.execOpts);
             }));
         });
     }
@@ -274,7 +287,7 @@ function run() {
             const allProblems = yield libraryChecker.problems();
             yield printProblems(allProblems);
             const listProblems = (_a = (yield getListProblems(listProblemsCommand))) !== null && _a !== void 0 ? _a : allProblems.map(p => p.name);
-            core.debug(listProblems.toString());
+            yield libraryChecker.generate(listProblems);
         }
         catch (error) {
             core.setFailed(error.message);

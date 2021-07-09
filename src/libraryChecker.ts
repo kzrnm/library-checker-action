@@ -28,6 +28,9 @@ export class LibraryChecker {
     })
   }
 
+  /**
+   * @returns Library Checker problems
+   */
   async problems(): Promise<Problem[]> {
     const versions = await (async () => {
       const out = await getExecOutput(
@@ -41,6 +44,19 @@ export class LibraryChecker {
       name: t[0],
       version: t[1] as string
     }))
+  }
+
+  /**
+   * generate problems
+   */
+  async generate(problemNames: string[]): Promise<void> {
+    await core.group('setup Library Checker Problems', async () => {
+      await exec(
+        'python3',
+        ['generate.py', '-p', ...problemNames],
+        this.execOpts
+      )
+    })
   }
 }
 

@@ -82,7 +82,7 @@ async function run(): Promise<void> {
     const listProblems =
       (await getListProblems(listProblemsCommand)) ??
       allProblems.map(p => p.name)
-    core.debug(listProblems.toString())
+    await libraryChecker.generate(listProblems)
   } catch (error) {
     core.setFailed(error.message)
   }
