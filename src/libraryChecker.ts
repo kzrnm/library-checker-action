@@ -1,10 +1,14 @@
+import * as cache from '@actions/cache'
 import * as core from '@actions/core'
 import {exec, getExecOutput, ExecOptions} from '@actions/exec'
-
+import path from 'path'
 export class LibraryChecker {
+  private static readonly CACHE_KEY = 'LibraryCheckerAction-cache-key'
+  private readonly libraryCheckerPath: string
   private execOpts: ExecOptions
 
   constructor(libraryCheckerPath: string) {
+    this.libraryCheckerPath = libraryCheckerPath
     this.execOpts = {cwd: libraryCheckerPath}
   }
 
@@ -13,6 +17,15 @@ export class LibraryChecker {
    */
   async setup(): Promise<void> {
     await core.group('setup Library Checker Problems', async () => {
+      const cacheKey = await cache.restoreCache(
+        [path.join(this.libraryCheckerPath, '**', 'in')],
+        LibraryChecker.CACHE_KEY
+      )
+      if (cacheKey === undefined) {
+        core.info(`Cache is not found`)
+      } else {
+        core.info(`Restore from ${cacheKey}`)
+      }
       await exec(
         'pip3',
         ['install', '--user', '-r', 'requirements.txt'],
@@ -56,6 +69,16 @@ export class LibraryChecker {
         ['generate.py', '-p', ...problemNames],
         this.execOpts
       )
+
+      try {
+        const cacheId = await cache.saveCache(
+          [path.join(this.libraryCheckerPath, '**', 'in')],
+          LibraryChecker.CACHE_KEY
+        )
+        core.info(`Cache problems. id = ${cacheId}`)
+      } catch (e) {
+        core.warning(e)
+      }
     })
   }
 }

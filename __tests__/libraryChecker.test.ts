@@ -1,10 +1,12 @@
 import * as exec from '@actions/exec'
+import * as cache from '@actions/cache'
 import fs from 'fs'
 import path from 'path'
 import {LibraryChecker} from '../src/libraryChecker'
 import {getMockedLogger} from './util'
 
 test('generate', async () => {
+  jest.spyOn(cache, 'saveCache').mockResolvedValue(0)
   const execMock = jest.spyOn(exec, 'exec').mockResolvedValueOnce(0)
   getMockedLogger()
   const libraryChecker = new LibraryChecker(__dirname)
@@ -21,6 +23,7 @@ test('problems', async () => {
   const versions = await fs.promises.readFile(
     path.join(__dirname, 'versions.json')
   )
+  jest.spyOn(cache, 'restoreCache').mockResolvedValue('cache key')
   jest.spyOn(exec, 'getExecOutput').mockResolvedValueOnce({
     exitCode: 0,
     stdout: versions.toString(),
