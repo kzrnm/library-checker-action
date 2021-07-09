@@ -6,25 +6,6 @@ require('./sourcemap-register.js');/******/ (() => { // webpackBootstrap
 
 "use strict";
 
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -36,21 +17,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.listProblems = void 0;
-const core = __importStar(__nccwpck_require__(186));
 const exec_1 = __nccwpck_require__(514);
 function listProblems(command) {
     return __awaiter(this, void 0, void 0, function* () {
         if (!command) {
-            core.info('Skip list-problems. Check all problems');
             return [];
         }
         const execOutput = yield exec_1.getExecOutput(command, undefined, { silent: true });
-        const problems = execOutput.stdout.split(/\s+/).filter(s => s.length > 0);
-        if (problems.length > 0)
-            core.info(`list-problems: ${problems.join(', ')}`);
-        else
-            core.warning('list-problems returns empty. Check all problems');
-        return problems;
+        return execOutput.stdout.split(/\s+/).filter(s => s.length > 0);
     });
 }
 exports.listProblems = listProblems;
@@ -83,7 +57,8 @@ const fs_1 = __importDefault(__nccwpck_require__(747));
 const git_clone_1 = __importDefault(__nccwpck_require__(62));
 class GitRepositoryCloner {
     constructor(repositoryNameOrUrl, commit) {
-        this.repositoryUrl = GitRepositoryCloner.toRepositoryURL(repositoryNameOrUrl);
+        this.repositoryUrl =
+            GitRepositoryCloner.toRepositoryURL(repositoryNameOrUrl);
         this.commit = commit;
     }
     /**
@@ -230,7 +205,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.printProblems = exports.checkout = exports.parseInput = void 0;
+exports.getListProblems = exports.printProblems = exports.checkout = exports.parseInput = void 0;
 const core = __importStar(__nccwpck_require__(186));
 const github_1 = __nccwpck_require__(928);
 const command = __importStar(__nccwpck_require__(524));
@@ -270,6 +245,21 @@ function printProblems(problems) {
     });
 }
 exports.printProblems = printProblems;
+function getListProblems(listProblemsCommand) {
+    return __awaiter(this, void 0, void 0, function* () {
+        if (!listProblemsCommand) {
+            core.info('Skip list-problems. Check all problems');
+            return [];
+        }
+        const listProblems = yield command.listProblems(listProblemsCommand);
+        if (listProblems.length > 0)
+            core.info(`list-problems: ${listProblems.join(', ')}`);
+        else
+            core.warning('list-problems returns empty. Check all problems');
+        return listProblems;
+    });
+}
+exports.getListProblems = getListProblems;
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
@@ -279,7 +269,8 @@ function run() {
             yield libraryChecker.setup();
             const allProblems = yield libraryChecker.problems();
             yield printProblems(allProblems);
-            yield command.listProblems(listProblemsCommand);
+            const listProblems = yield getListProblems(listProblemsCommand);
+            core.debug(listProblems.toString());
         }
         catch (error) {
             core.setFailed(error.message);
