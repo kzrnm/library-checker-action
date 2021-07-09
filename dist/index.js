@@ -153,7 +153,7 @@ class LibraryChecker {
                     core.info(`Cache is not found`);
                 }
                 else {
-                    core.info(`Restore from ${cacheKey}`);
+                    core.info(`Restore problems from cache = ${cacheKey}`);
                 }
                 yield exec_1.exec('pip3', ['install', '--user', '-r', 'requirements.txt'], this.execOpts);
                 if (process.platform !== 'win32' && process.platform !== 'darwin') {

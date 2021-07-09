@@ -24,7 +24,7 @@ export class LibraryChecker {
       if (cacheKey === undefined) {
         core.info(`Cache is not found`)
       } else {
-        core.info(`Restore from ${cacheKey}`)
+        core.info(`Restore problems from cache = ${cacheKey}`)
       }
       await exec(
         'pip3',
