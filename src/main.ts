@@ -50,16 +50,19 @@ export async function printProblems(problems: Problem[]): Promise<void> {
 
 export async function getListProblems(
   listProblemsCommand?: string
-): Promise<string[]> {
+): Promise<string[] | null> {
   if (!listProblemsCommand) {
     core.info('Skip list-problems. Check all problems')
-    return []
+    return null
   }
   const listProblems = await command.listProblems(listProblemsCommand)
-  if (listProblems.length > 0)
+  if (listProblems.length > 0) {
     core.info(`list-problems: ${listProblems.join(', ')}`)
-  else core.warning('list-problems returns empty. Check all problems')
-  return listProblems
+    return listProblems
+  } else {
+    core.warning('list-problems returns empty. Check all problems')
+    return null
+  }
 }
 
 async function run(): Promise<void> {
@@ -76,7 +79,9 @@ async function run(): Promise<void> {
     const allProblems = await libraryChecker.problems()
     await printProblems(allProblems)
 
-    const listProblems = await getListProblems(listProblemsCommand)
+    const listProblems =
+      (await getListProblems(listProblemsCommand)) ??
+      allProblems.map(p => p.name)
     core.debug(listProblems.toString())
   } catch (error) {
     core.setFailed(error.message)

@@ -112,7 +112,7 @@ test('printProblems', () => {
 describe('checkout library checker', () => {
   test('empty command', async () => {
     const mockedLogger = getMockedLogger()
-    expect(await main.getListProblems(``)).toStrictEqual([])
+    expect(await main.getListProblems(``)).toBeNull()
     expect(mockedLogger).toBeCalledTimes(1)
     expect(mockedLogger).toBeCalledWith(
       'info',
@@ -122,9 +122,7 @@ describe('checkout library checker', () => {
 
   test('echo empty', async () => {
     const mockedLogger = getMockedLogger()
-    expect(
-      await main.getListProblems(`node -e "console.log("")"`)
-    ).toStrictEqual([])
+    expect(await main.getListProblems(`node -e "console.log("")"`)).toBeNull()
     expect(mockedLogger).toBeCalledTimes(1)
     expect(mockedLogger).toBeCalledWith(
       'warning',

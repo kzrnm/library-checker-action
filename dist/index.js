@@ -249,18 +249,22 @@ function getListProblems(listProblemsCommand) {
     return __awaiter(this, void 0, void 0, function* () {
         if (!listProblemsCommand) {
             core.info('Skip list-problems. Check all problems');
-            return [];
+            return null;
         }
         const listProblems = yield command.listProblems(listProblemsCommand);
-        if (listProblems.length > 0)
+        if (listProblems.length > 0) {
             core.info(`list-problems: ${listProblems.join(', ')}`);
-        else
+            return listProblems;
+        }
+        else {
             core.warning('list-problems returns empty. Check all problems');
-        return listProblems;
+            return null;
+        }
     });
 }
 exports.getListProblems = getListProblems;
 function run() {
+    var _a;
     return __awaiter(this, void 0, void 0, function* () {
         try {
             core.setCommandEcho(true);
@@ -269,7 +273,7 @@ function run() {
             yield libraryChecker.setup();
             const allProblems = yield libraryChecker.problems();
             yield printProblems(allProblems);
-            const listProblems = yield getListProblems(listProblemsCommand);
+            const listProblems = (_a = (yield getListProblems(listProblemsCommand))) !== null && _a !== void 0 ? _a : allProblems.map(p => p.name);
             core.debug(listProblems.toString());
         }
         catch (error) {
