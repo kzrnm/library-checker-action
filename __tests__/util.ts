@@ -1,16 +1,5 @@
 import * as core from '@actions/core'
 
-export function getMockedInput(impl: {
-  [s: string]: string
-}): jest.SpyInstance<
-  string,
-  [name: string, options?: core.InputOptions | undefined]
-> {
-  return jest
-    .spyOn(core, 'getInput')
-    .mockImplementation((name, opt) => impl[name] ?? '')
-}
-
 export function getMockedLogger(): jest.Mock<
   void,
   [kind: string, message: string | Error]
@@ -28,5 +17,21 @@ export function getMockedLogger(): jest.Mock<
   jest
     .spyOn(core, 'error')
     .mockImplementation(message => mockedLogger('error', message))
+  jest
+    .spyOn(core, 'startGroup')
+    .mockImplementation(message => mockedLogger('startGroup', message))
+  jest
+    .spyOn(core, 'endGroup')
+    .mockImplementation(() => mockedLogger('endGroup', ''))
+
+  jest.spyOn(core, 'group').mockImplementation((name, fn) => {
+    mockedLogger('startGroup', name)
+    try {
+      return fn()
+    } finally {
+      mockedLogger('endGroup', '')
+    }
+  })
+
   return mockedLogger
 }

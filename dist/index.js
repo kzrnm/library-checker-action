@@ -41,15 +41,15 @@ const exec_1 = __nccwpck_require__(514);
 function listProblems(command) {
     return __awaiter(this, void 0, void 0, function* () {
         if (!command) {
-            core.info('Check all problems');
+            core.info('Skip list-problems. Check all problems');
             return [];
         }
         const execOutput = yield exec_1.getExecOutput(command, undefined, { silent: true });
         const problems = execOutput.stdout.split(/\s+/).filter(s => s.length > 0);
         if (problems.length > 0)
-            core.info(`problems: ${problems.join(', ')}`);
+            core.info(`list-problems: ${problems.join(', ')}`);
         else
-            core.warning('problems not found. Check all problems');
+            core.warning('list-problems returns empty. Check all problems');
         return problems;
     });
 }
@@ -83,7 +83,7 @@ const fs_1 = __importDefault(__nccwpck_require__(747));
 const git_clone_1 = __importDefault(__nccwpck_require__(62));
 /**
  * Checkout repository
- * @returns directory path of the repository
+ * @returns directory of the repository
  */
 function checkoutRepository(repositoryURL, commit) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -116,7 +116,7 @@ exports.getRepositoryURL = getRepositoryURL;
 
 /***/ }),
 
-/***/ 245:
+/***/ 638:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -155,7 +155,6 @@ const core = __importStar(__nccwpck_require__(186));
 const exec_1 = __nccwpck_require__(514);
 class LibraryChecker {
     constructor(libraryCheckerPath) {
-        this.libraryCheckerPath = libraryCheckerPath;
         this.execOpts = { cwd: libraryCheckerPath };
     }
     /**
@@ -172,6 +171,18 @@ class LibraryChecker {
                         process.pid.toString()
                     ]); // ulimit -s unlimited
                 }
+            }));
+        });
+    }
+    problems() {
+        return __awaiter(this, void 0, void 0, function* () {
+            const versions = yield (() => __awaiter(this, void 0, void 0, function* () {
+                const out = yield exec_1.getExecOutput('python3', ['ci_generate.py', '--print-version'], Object.assign({ silent: true }, this.execOpts));
+                return out.stdout;
+            }))();
+            return Object.entries(JSON.parse(versions)).map(t => ({
+                name: t[0],
+                version: t[1]
             }));
         });
     }
@@ -215,12 +226,22 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.checkout = void 0;
+exports.printProblems = exports.checkout = exports.parseInput = void 0;
 const core = __importStar(__nccwpck_require__(186));
-const exec_1 = __nccwpck_require__(514);
 const github = __importStar(__nccwpck_require__(928));
 const command = __importStar(__nccwpck_require__(524));
-const library_checker_1 = __nccwpck_require__(245);
+const libraryChecker_1 = __nccwpck_require__(638);
+function parseInput(getInputFunc) {
+    const repositoryName = getInputFunc('repository-name');
+    const commit = getInputFunc('commit');
+    const listProblemsCommand = getInputFunc('list-problems');
+    return {
+        repositoryName,
+        commit: commit || undefined,
+        listProblemsCommand: listProblemsCommand || undefined
+    };
+}
+exports.parseInput = parseInput;
 /**
  * Checkout repository
  * @returns Library Checker path
@@ -235,16 +256,26 @@ function checkout(repositoryName, commit) {
     });
 }
 exports.checkout = checkout;
+function printProblems(problems) {
+    return __awaiter(this, void 0, void 0, function* () {
+        core.group('Library Checker Problems', () => __awaiter(this, void 0, void 0, function* () {
+            for (const p of problems) {
+                core.info(`${p.name}: ${p.version}`);
+            }
+        }));
+    });
+}
+exports.printProblems = printProblems;
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const libraryCheckerPath = yield checkout(core.getInput('repsitory-name'), core.getInput('commit') || undefined);
-            const libraryChecker = new library_checker_1.LibraryChecker(libraryCheckerPath);
+            core.setCommandEcho(true);
+            const { repositoryName, commit, listProblemsCommand } = parseInput(core.getInput);
+            const libraryChecker = new libraryChecker_1.LibraryChecker(yield checkout(repositoryName, commit));
             yield libraryChecker.setup();
-            yield exec_1.exec('python3', ['ci_generate.py', '--print-version'], {
-                cwd: libraryCheckerPath
-            });
-            yield command.listProblems(core.getInput('list-problems'));
+            const allProblems = yield libraryChecker.problems();
+            yield printProblems(allProblems);
+            yield command.listProblems(listProblemsCommand);
         }
         catch (error) {
             core.setFailed(error.message);

@@ -2,7 +2,7 @@ name: 'Library Checker Action'
 description: 'This action runs yosupo06/library-checker-problems'
 author: 'naminodarie'
 inputs:
-  repsitory-name:
+  repository-name:
     required: false
     description: 'library checcker repository'
     default: 'yosupo06/library-checker-problems'

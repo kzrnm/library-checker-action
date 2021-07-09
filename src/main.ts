@@ -1,8 +1,29 @@
 import * as core from '@actions/core'
-import {exec} from '@actions/exec'
 import * as github from './github'
 import * as command from './command'
-import {LibraryChecker} from './library_checker'
+import {LibraryChecker, Problem} from './libraryChecker'
+
+interface InputObject {
+  repositoryName: string
+  commit?: string
+  listProblemsCommand?: string
+}
+
+export function parseInput(
+  getInputFunc: (
+    name: string,
+    options?: core.InputOptions | undefined
+  ) => string
+): InputObject {
+  const repositoryName = getInputFunc('repository-name')
+  const commit = getInputFunc('commit')
+  const listProblemsCommand = getInputFunc('list-problems')
+  return {
+    repositoryName,
+    commit: commit || undefined,
+    listProblemsCommand: listProblemsCommand || undefined
+  }
+}
 
 /**
  * Checkout repository
@@ -19,19 +40,29 @@ export async function checkout(
   return libraryChecker
 }
 
+export async function printProblems(problems: Problem[]): Promise<void> {
+  core.group('Library Checker Problems', async () => {
+    for (const p of problems) {
+      core.info(`${p.name}: ${p.version}`)
+    }
+  })
+}
+
 async function run(): Promise<void> {
   try {
-    const libraryCheckerPath = await checkout(
-      core.getInput('repsitory-name'),
-      core.getInput('commit') || undefined
+    core.setCommandEcho(true)
+    const {repositoryName, commit, listProblemsCommand} = parseInput(
+      core.getInput
     )
-    const libraryChecker = new LibraryChecker(libraryCheckerPath)
+    const libraryChecker = new LibraryChecker(
+      await checkout(repositoryName, commit)
+    )
     await libraryChecker.setup()
 
-    await exec('python3', ['ci_generate.py', '--print-version'], {
-      cwd: libraryCheckerPath
-    })
-    await command.listProblems(core.getInput('list-problems'))
+    const allProblems = await libraryChecker.problems()
+    await printProblems(allProblems)
+
+    await command.listProblems(listProblemsCommand)
   } catch (error) {
     core.setFailed(error.message)
   }

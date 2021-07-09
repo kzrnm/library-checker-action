@@ -6,7 +6,7 @@ This action runs [yosupo06/library-checker-problems](https://github.com/yosupo06
 
 ## Input
 
-### repsitory-name
+### repository-name
 
 **Option** 
 

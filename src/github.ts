@@ -9,7 +9,7 @@ export interface CheckoutOptions {
 
 /**
  * Checkout repository
- * @returns directory path of the repository
+ * @returns directory of the repository
  */
 export async function checkoutRepository(
   repositoryURL: string,

@@ -1,12 +1,10 @@
 import * as core from '@actions/core'
-import {exec, ExecOptions} from '@actions/exec'
+import {exec, getExecOutput, ExecOptions} from '@actions/exec'
 
 export class LibraryChecker {
-  libraryCheckerPath: string
-  execOpts: ExecOptions
+  private execOpts: ExecOptions
 
   constructor(libraryCheckerPath: string) {
-    this.libraryCheckerPath = libraryCheckerPath
     this.execOpts = {cwd: libraryCheckerPath}
   }
 
@@ -29,4 +27,24 @@ export class LibraryChecker {
       }
     })
   }
+
+  async problems(): Promise<Problem[]> {
+    const versions = await (async () => {
+      const out = await getExecOutput(
+        'python3',
+        ['ci_generate.py', '--print-version'],
+        {silent: true, ...this.execOpts}
+      )
+      return out.stdout
+    })()
+    return Object.entries(JSON.parse(versions)).map(t => ({
+      name: t[0],
+      version: t[1] as string
+    }))
+  }
+}
+
+export interface Problem {
+  name: string
+  version: string
 }
