@@ -1,5 +1,5 @@
 import * as core from '@actions/core'
-import * as github from './github'
+import {GitRepositoryCloner} from './github'
 import * as command from './command'
 import {LibraryChecker, Problem} from './libraryChecker'
 
@@ -33,10 +33,10 @@ export async function checkout(
   repositoryName: string,
   commit: string | undefined
 ): Promise<string> {
-  const repositoryURL = github.getRepositoryURL(repositoryName)
-  const libraryChecker = await github.checkoutRepository(repositoryURL, commit)
+  const gh = new GitRepositoryCloner(repositoryName, commit)
+  const libraryChecker = await gh.checkoutRepository()
   const treePath = commit ? `/tree/${commit}` : ''
-  core.info(`checkout ${repositoryURL}${treePath} to ${libraryChecker}`)
+  core.info(`checkout ${gh.repositoryUrl}${treePath} to ${libraryChecker}`)
   return libraryChecker
 }
 

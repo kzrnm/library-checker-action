@@ -1,4 +1,4 @@
-import {checkoutRepository, getRepositoryURL} from '../src/github'
+import {GitRepositoryCloner} from '../src/github'
 import fs from 'fs'
 jest.mock('git-clone')
 const clone = require('git-clone')
@@ -17,9 +17,10 @@ describe('checkout repository', () => {
   })
 
   test('without commit hash', async () => {
-    const dir = await checkoutRepository(
+    const gh = new GitRepositoryCloner(
       'https://github.com/naminodarie/library-checker-action'
     )
+    const dir = await gh.checkoutRepository()
     expect(dir).toMatch(/.*library-checker-action\.ABCDEFG$/)
 
     expect(clone).toBeCalledTimes(1)
@@ -32,10 +33,11 @@ describe('checkout repository', () => {
   })
 
   test('with commit hash', async () => {
-    const dir = await checkoutRepository(
+    const gh = new GitRepositoryCloner(
       'https://github.com/naminodarie/library-checker-action',
       'commit-hash'
     )
+    const dir = await gh.checkoutRepository()
     expect(dir).toMatch(/.*library-checker-action\.ABCDEFG$/)
 
     expect(clone).toBeCalledTimes(1)
@@ -63,7 +65,7 @@ describe('get repository URL', () => {
       'git@github.com/naminodarie/library-checker-action',
       'git@github.com/naminodarie/library-checker-action'
     ]
-  ])('getRepositoryURL(%s) ==  %s', (nameOrUrl, expected) => {
-    expect(getRepositoryURL(nameOrUrl)).toBe(expected)
+  ])('url or name: %s, url: %s', (nameOrUrl, expected) => {
+    expect(new GitRepositoryCloner(nameOrUrl).repositoryUrl).toBe(expected)
   })
 })

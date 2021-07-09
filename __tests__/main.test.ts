@@ -26,9 +26,18 @@ describe('parseInput', () => {
 })
 
 describe('checkout library checker', () => {
+  beforeAll(() => {
+    const OrigGitRepositoryCloner = gh.GitRepositoryCloner
+    jest
+      .spyOn(gh, 'GitRepositoryCloner')
+      .mockImplementation((nameOrUrl, commit) => {
+        const g = new OrigGitRepositoryCloner(nameOrUrl, commit)
+        jest.spyOn(g, 'checkoutRepository').mockResolvedValue('/tmp/directory')
+        return g
+      })
+  })
   beforeEach(() => {
     jest.clearAllMocks()
-    jest.spyOn(gh, 'checkoutRepository').mockResolvedValue('/tmp/directory')
   })
 
   test('default', async () => {

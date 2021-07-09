@@ -76,42 +76,46 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getRepositoryURL = exports.checkoutRepository = void 0;
+exports.GitRepositoryCloner = void 0;
 const os_1 = __importDefault(__nccwpck_require__(87));
 const path_1 = __importDefault(__nccwpck_require__(622));
 const fs_1 = __importDefault(__nccwpck_require__(747));
 const git_clone_1 = __importDefault(__nccwpck_require__(62));
-/**
- * Checkout repository
- * @returns directory of the repository
- */
-function checkoutRepository(repositoryURL, commit) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const dir = yield fs_1.default.promises.mkdtemp(path_1.default.join(os_1.default.tmpdir(), 'library-checker-action.'));
-        return new Promise((resolve, reject) => {
-            git_clone_1.default(repositoryURL, dir, { checkout: commit, shallow: true }, e => {
-                if (e) {
-                    reject(e);
-                }
-                resolve(dir);
+class GitRepositoryCloner {
+    constructor(repositoryNameOrUrl, commit) {
+        this.repositoryUrl = GitRepositoryCloner.toRepositoryURL(repositoryNameOrUrl);
+        this.commit = commit;
+    }
+    /**
+     * @returns repository full path default: https://github.com/yosupo06/library-checker-problems
+     */
+    static toRepositoryURL(repositoryNameOrUrl) {
+        const nameOrUrl = repositoryNameOrUrl;
+        if (!nameOrUrl)
+            return 'https://github.com/yosupo06/library-checker-problems';
+        if (nameOrUrl.startsWith('https://') || nameOrUrl.startsWith('git@'))
+            return nameOrUrl;
+        return `https://github.com/${nameOrUrl}`;
+    }
+    /**
+     * Checkout repository
+     * @returns directory of the repository
+     */
+    checkoutRepository() {
+        return __awaiter(this, void 0, void 0, function* () {
+            const dir = yield fs_1.default.promises.mkdtemp(path_1.default.join(os_1.default.tmpdir(), 'library-checker-action.'));
+            return new Promise((resolve, reject) => {
+                git_clone_1.default(this.repositoryUrl, dir, { checkout: this.commit, shallow: true }, e => {
+                    if (e) {
+                        reject(e);
+                    }
+                    resolve(dir);
+                });
             });
         });
-    });
+    }
 }
-exports.checkoutRepository = checkoutRepository;
-/**
- *
- * @param nameOrUrl repository name or url
- * @returns repository full path default: https://github.com/yosupo06/library-checker-problems
- */
-function getRepositoryURL(nameOrUrl) {
-    if (!nameOrUrl)
-        return 'https://github.com/yosupo06/library-checker-problems';
-    if (nameOrUrl.startsWith('https://') || nameOrUrl.startsWith('git@'))
-        return nameOrUrl;
-    return `https://github.com/${nameOrUrl}`;
-}
-exports.getRepositoryURL = getRepositoryURL;
+exports.GitRepositoryCloner = GitRepositoryCloner;
 
 
 /***/ }),
@@ -228,7 +232,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.printProblems = exports.checkout = exports.parseInput = void 0;
 const core = __importStar(__nccwpck_require__(186));
-const github = __importStar(__nccwpck_require__(928));
+const github_1 = __nccwpck_require__(928);
 const command = __importStar(__nccwpck_require__(524));
 const libraryChecker_1 = __nccwpck_require__(638);
 function parseInput(getInputFunc) {
@@ -248,10 +252,10 @@ exports.parseInput = parseInput;
  */
 function checkout(repositoryName, commit) {
     return __awaiter(this, void 0, void 0, function* () {
-        const repositoryURL = github.getRepositoryURL(repositoryName);
-        const libraryChecker = yield github.checkoutRepository(repositoryURL, commit);
+        const gh = new github_1.GitRepositoryCloner(repositoryName, commit);
+        const libraryChecker = yield gh.checkoutRepository();
         const treePath = commit ? `/tree/${commit}` : '';
-        core.info(`checkout ${repositoryURL}${treePath} to ${libraryChecker}`);
+        core.info(`checkout ${gh.repositoryUrl}${treePath} to ${libraryChecker}`);
         return libraryChecker;
     });
 }
