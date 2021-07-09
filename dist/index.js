@@ -51,9 +51,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GitRepositoryCloner = void 0;
-const os_1 = __importDefault(__nccwpck_require__(2087));
 const path_1 = __importDefault(__nccwpck_require__(5622));
-const fs_1 = __importDefault(__nccwpck_require__(5747));
 const git_clone_1 = __importDefault(__nccwpck_require__(5062));
 class GitRepositoryCloner {
     constructor(repositoryNameOrUrl, commit) {
@@ -78,7 +76,7 @@ class GitRepositoryCloner {
      */
     checkoutRepository() {
         return __awaiter(this, void 0, void 0, function* () {
-            const dir = yield fs_1.default.promises.mkdtemp(path_1.default.join(os_1.default.tmpdir(), 'library-checker-action.'));
+            const dir = path_1.default.join(process.cwd(), 'library-checker-action');
             return new Promise((resolve, reject) => {
                 git_clone_1.default(this.repositoryUrl, dir, { checkout: this.commit, shallow: true }, e => {
                     if (e) {

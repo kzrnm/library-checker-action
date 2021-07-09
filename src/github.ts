@@ -1,6 +1,4 @@
-import os from 'os'
 import path from 'path'
-import fs from 'fs'
 import clone from 'git-clone'
 
 export class GitRepositoryCloner {
@@ -29,9 +27,7 @@ export class GitRepositoryCloner {
    * @returns directory of the repository
    */
   async checkoutRepository(): Promise<string> {
-    const dir = await fs.promises.mkdtemp(
-      path.join(os.tmpdir(), 'library-checker-action.')
-    )
+    const dir = path.join(process.cwd(), 'library-checker-action')
     return new Promise((resolve, reject) => {
       clone(
         this.repositoryUrl,
