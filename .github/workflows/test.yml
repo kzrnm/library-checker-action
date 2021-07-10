@@ -24,4 +24,4 @@ jobs:
       - uses: actions/checkout@v2
       - uses: ./
         with:
-          list-problems: "python3 ${{ github.workspace }}/Samples/Python/main.py --list-tests"
+          list-problems: "echo dummy aplusb many_aplusb"

@@ -1,6 +1,7 @@
 import * as core from '@actions/core'
 import {getExecOutput} from '@actions/exec'
 import * as command from './command'
+import fs from 'fs'
 import {GitRepositoryCloner} from './github'
 import {LibraryChecker} from './libraryChecker'
 
@@ -60,7 +61,7 @@ export async function checkout(
 }
 
 export async function printProblems(problems: {
-  [name: string]: string
+  [name: string]: string | undefined
 }): Promise<void> {
   core.group('Library Checker Problems', async () => {
     for (const [name, version] of Object.entries(problems)) {
