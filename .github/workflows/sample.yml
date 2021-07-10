@@ -1,0 +1,39 @@
+name: 'sample'
+on: # rebuild any PRs and main branch changes
+  pull_request:
+  push:
+    branches:
+      - master
+
+jobs:
+  build: # make sure build/ci work properly
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: 16
+          cache: 'npm'
+      - run: npm install
+      - run: npm run all
+  python-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ./
+        with:
+          list-problems: "python3 ${{ github.workspace }}/Samples/Python/main.py --list-tests"
+  csharp-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 3.1.x
+      - name: Build
+        run: dotnet build ${{ github.workspace }}/Samples/CSharp/CSharp.csproj -c Release -o ${{ github.workspace }}/Samples/CSharp/CSharp/bin/
+      - uses: ./
+        with:
+          list-problems: "dotnet ${{ github.workspace }}/Samples/CSharp/CSharp/bin/CSharp.dll --list-solvers"
