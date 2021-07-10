@@ -197,12 +197,13 @@ class LibraryChecker {
         ];
     }
     getCacheKey() {
-        return `${LibraryChecker.CACHE_KEY_PREFIX}${this.commit}-${this.id}`;
+        return `${LibraryChecker.CACHE_KEY_PREFIX}${process.platform}-${this.commit}-${this.id}`;
     }
     restoreCacheKey() {
         return [
             this.getCacheKey(),
-            `${LibraryChecker.CACHE_KEY_PREFIX}${this.commit}-`,
+            `${LibraryChecker.CACHE_KEY_PREFIX}${process.platform}-${this.commit}-`,
+            `${LibraryChecker.CACHE_KEY_PREFIX}${process.platform}-`,
             LibraryChecker.CACHE_KEY_PREFIX
         ];
     }
