@@ -67,7 +67,7 @@ export class LibraryChecker {
    * setup Library Checker
    */
   async setup(): Promise<void> {
-    await core.group('setup Library Checker Problems', async () => {
+    await core.group('setup Library Checker', async () => {
       const cacheKey = await cache.restoreCache(
         this.getCachePath(),
         this.getCacheKey(),
@@ -158,7 +158,7 @@ export class LibraryChecker {
       core.warning(`Problems are not found: ${notFounds.join(', ')}`)
     }
 
-    await core.group('setup Library Checker Problems', async () => {
+    await core.group('generate problems', async () => {
       const addedsSet = new Set(addeds)
       const targetNames = Object.keys(targets)
       const cached = targetNames.filter(n => !addedsSet.has(n))

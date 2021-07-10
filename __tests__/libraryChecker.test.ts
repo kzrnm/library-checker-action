@@ -44,7 +44,7 @@ describe('generate', () => {
         {cwd: __dirname}
       )
       expect(mockedLogger.mock.calls).toEqual([
-        ['startGroup', 'setup Library Checker Problems'],
+        ['startGroup', 'generate problems'],
         ['debug', 'cached: aplusb, unionfind, many_aplusb'],
         ['info', 'Cache is not updated.'],
         ['endGroup', '']
@@ -66,7 +66,7 @@ describe('generate', () => {
         {cwd: __dirname}
       )
       expect(mockedLogger.mock.calls).toEqual([
-        ['startGroup', 'setup Library Checker Problems'],
+        ['startGroup', 'generate problems'],
         ['debug', 'cached target is empty'],
         ['info', 'Cache problems. id = 0'],
         ['endGroup', '']
@@ -88,7 +88,7 @@ describe('generate', () => {
         {cwd: __dirname}
       )
       expect(mockedLogger.mock.calls).toEqual([
-        ['startGroup', 'setup Library Checker Problems'],
+        ['startGroup', 'generate problems'],
         ['debug', 'cached: aplusb, many_aplusb'],
         ['info', 'Cache problems. id = 0'],
         ['endGroup', '']
@@ -112,7 +112,7 @@ describe('generate', () => {
         {cwd: __dirname}
       )
       expect(mockedLogger.mock.calls).toEqual([
-        ['startGroup', 'setup Library Checker Problems'],
+        ['startGroup', 'generate problems'],
         ['debug', 'cached: aplusb, unionfind, many_aplusb'],
         ['info', 'Cache problems. id = 0'],
         ['endGroup', '']
@@ -143,7 +143,7 @@ describe('generate', () => {
       )
       expect(mockedLogger.mock.calls).toEqual([
         ['warning', 'Problems are not found: notfound, anything'],
-        ['startGroup', 'setup Library Checker Problems'],
+        ['startGroup', 'generate problems'],
         ['debug', 'cached: aplusb, unionfind, many_aplusb'],
         ['info', 'Cache problems. id = 0'],
         ['endGroup', '']

@@ -210,7 +210,7 @@ class LibraryChecker {
      */
     setup() {
         return __awaiter(this, void 0, void 0, function* () {
-            yield core.group('setup Library Checker Problems', () => __awaiter(this, void 0, void 0, function* () {
+            yield core.group('setup Library Checker', () => __awaiter(this, void 0, void 0, function* () {
                 const cacheKey = yield cache.restoreCache(this.getCachePath(), this.getCacheKey(), this.restoreCacheKey());
                 if (cacheKey === undefined) {
                     core.info(`Cache is not found`);
@@ -286,7 +286,7 @@ class LibraryChecker {
             if (notFounds.length > 0) {
                 core.warning(`Problems are not found: ${notFounds.join(', ')}`);
             }
-            yield core.group('setup Library Checker Problems', () => __awaiter(this, void 0, void 0, function* () {
+            yield core.group('generate problems', () => __awaiter(this, void 0, void 0, function* () {
                 const addedsSet = new Set(addeds);
                 const targetNames = Object.keys(targets);
                 const cached = targetNames.filter(n => !addedsSet.has(n));
