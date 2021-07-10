@@ -24,4 +24,4 @@ jobs:
       - uses: actions/checkout@v2
       - uses: ./
         with:
-          list-problems: "echo dummy aplusb"
+          list-problems: "echo dummy aplusb many_aplusb"
