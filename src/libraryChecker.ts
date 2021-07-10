@@ -1,10 +1,11 @@
 import * as cache from '@actions/cache'
 import * as core from '@actions/core'
 import * as glob from '@actions/glob'
+import {exec, getExecOutput, ExecOptions} from '@actions/exec'
 import fs from 'fs'
 import path from 'path'
-import {exec, getExecOutput, ExecOptions} from '@actions/exec'
 import {v1 as uuidv1} from 'uuid'
+import stringify from 'json-stable-stringify'
 export class LibraryChecker {
   private static CACHE_KEY_PREFIX = 'LibraryCheckerAction-'
   private readonly libraryCheckerPath: string
@@ -178,10 +179,7 @@ export class LibraryChecker {
       )
 
       try {
-        await fs.promises.writeFile(
-          this.getCacheDataPath(),
-          JSON.stringify(targets)
-        )
+        await fs.promises.writeFile(this.getCacheDataPath(), stringify(targets))
         if (this.lastCacheHash === (await this.getCacheHash())) {
           core.info('Cache is not updated.')
           return
