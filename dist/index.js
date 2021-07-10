@@ -154,14 +154,24 @@ class LibraryChecker {
         this.id = uuid_1.v1();
         this.execOpts = { cwd: libraryCheckerPath };
     }
-    updateTimestampOfCachedFile() {
+    getCacheHash() {
+        return __awaiter(this, void 0, void 0, function* () {
+            return glob.hashFiles(this.getCachePath().join('\n'));
+        });
+    }
+    updateTimestampOfCachedFile(name) {
         var e_1, _a;
         return __awaiter(this, void 0, void 0, function* () {
-            const globber = yield glob.create(this.getCachePath().join('\n'));
+            const globber = yield glob.create([
+                path_1.default.join(this.libraryCheckerPath, '**', name, 'checker'),
+                path_1.default.join(this.libraryCheckerPath, '**', name, 'in'),
+                path_1.default.join(this.libraryCheckerPath, '**', name, 'out')
+            ].join('\n'));
             const now = new Date();
             try {
                 for (var _b = __asyncValues(globber.globGenerator()), _c; _c = yield _b.next(), !_c.done;) {
                     const file = _c.value;
+                    core.debug(`update utime and mtime: ${file}`);
                     yield fs_1.default.promises.utimes(file, now, now);
                 }
             }
@@ -174,13 +184,12 @@ class LibraryChecker {
             }
         });
     }
-    resolveCachedFileHash() {
-        return __awaiter(this, void 0, void 0, function* () {
-            return yield glob.hashFiles(this.getCachePath().join('\n'));
-        });
+    getCacheDataPath() {
+        return path_1.default.join(this.libraryCheckerPath, 'cache.json');
     }
     getCachePath() {
         return [
+            this.getCacheDataPath(),
             path_1.default.join(this.libraryCheckerPath, '**', 'checker'),
             path_1.default.join(this.libraryCheckerPath, '**', 'in'),
             path_1.default.join(this.libraryCheckerPath, '**', 'out')
@@ -207,9 +216,8 @@ class LibraryChecker {
                     core.info(`Cache is not found`);
                 }
                 else {
-                    yield this.updateTimestampOfCachedFile();
-                    this.restoredHash = yield this.resolveCachedFileHash();
                     core.info(`Restore problems from cache = ${cacheKey}`);
+                    this.lastCacheHash = yield this.getCacheHash();
                 }
                 yield exec_1.exec('pip3', ['install', '--user', '-r', 'requirements.txt'], this.execOpts);
                 if (process.platform !== 'win32' && process.platform !== 'darwin') {
@@ -227,11 +235,46 @@ class LibraryChecker {
      */
     problems() {
         return __awaiter(this, void 0, void 0, function* () {
-            const versions = yield (() => __awaiter(this, void 0, void 0, function* () {
-                const out = yield exec_1.getExecOutput('python3', ['ci_generate.py', '--print-version'], Object.assign({ silent: true }, this.execOpts));
-                return out.stdout;
-            }))();
-            return JSON.parse(versions);
+            if (this.problemsData) {
+                return this.problemsData;
+            }
+            const out = yield exec_1.getExecOutput('python3', ['ci_generate.py', '--print-version'], Object.assign({ silent: true }, this.execOpts));
+            return (this.problemsData = JSON.parse(out.stdout));
+        });
+    }
+    /**
+     * @returns Cached Library Checker problems list
+     */
+    cachedProblems() {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                return JSON.parse(yield fs_1.default.promises.readFile(this.getCacheDataPath(), { encoding: 'utf-8' }));
+            }
+            catch (e) {
+                return {};
+            }
+        });
+    }
+    checkCached(problemNames) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const current = yield this.problems();
+            const cached = yield this.cachedProblems();
+            const targets = {};
+            const addeds = [];
+            const notFounds = [];
+            for (const name of problemNames) {
+                const version = current[name];
+                if (version) {
+                    targets[name] = version;
+                    if (version !== cached[name]) {
+                        addeds.push(name);
+                    }
+                }
+                else {
+                    notFounds.push(name);
+                }
+            }
+            return { targets, addeds, notFounds };
         });
     }
     /**
@@ -239,16 +282,30 @@ class LibraryChecker {
      */
     generate(problemNames) {
         return __awaiter(this, void 0, void 0, function* () {
+            const { targets, addeds, notFounds } = yield this.checkCached(problemNames);
+            if (notFounds.length > 0) {
+                core.warning(`Problems are not found: ${notFounds.join(', ')}`);
+            }
             yield core.group('setup Library Checker Problems', () => __awaiter(this, void 0, void 0, function* () {
-                yield exec_1.exec('python3', ['generate.py', '-p', ...problemNames], this.execOpts);
+                const addedsSet = new Set(addeds);
+                const targetNames = Object.keys(targets);
+                const cached = targetNames.filter(n => !addedsSet.has(n));
+                if (cached.length > 0) {
+                    core.debug(`cached: ${cached.join(', ')}`);
+                }
+                else {
+                    core.debug('cached target is empty');
+                }
+                yield Promise.all(cached.map((n) => __awaiter(this, void 0, void 0, function* () { return yield this.updateTimestampOfCachedFile(n); })));
+                yield exec_1.exec('python3', ['generate.py', '-p', ...targetNames], this.execOpts);
                 try {
-                    if (this.restoredHash === (yield this.resolveCachedFileHash())) {
+                    yield fs_1.default.promises.writeFile(this.getCacheDataPath(), JSON.stringify(targets));
+                    if (this.lastCacheHash === (yield this.getCacheHash())) {
                         core.info('Cache is not updated.');
+                        return;
                     }
-                    else {
-                        const cacheId = yield cache.saveCache(this.getCachePath(), this.getCacheKey());
-                        core.info(`Cache problems. id = ${cacheId}`);
-                    }
+                    const cacheId = yield cache.saveCache(this.getCachePath(), this.getCacheKey());
+                    core.info(`Cache problems. id = ${cacheId}`);
                 }
                 catch (e) {
                     core.warning(e);
@@ -375,7 +432,7 @@ function run() {
             yield libraryChecker.setup();
             const allProblems = yield libraryChecker.problems();
             yield printProblems(allProblems);
-            const listProblems = (_a = (yield getListProblems(listProblemsCommand))) !== null && _a !== void 0 ? _a : allProblems.map(p => p.name);
+            const listProblems = (_a = (yield getListProblems(listProblemsCommand))) !== null && _a !== void 0 ? _a : Object.keys(allProblems);
             yield libraryChecker.generate(listProblems);
         }
         catch (error) {

@@ -71,9 +71,9 @@ describe('checkout library checker', () => {
   })
 })
 
-test('printProblems', () => {
+test('printProblems', async () => {
   const mockedLogger = getMockedLogger()
-  main.printProblems({
+  await main.printProblems({
     pro1: 'ABCD-EFGH-0001',
     pro2: 'ABCD-EFGH-0002',
     pro3: 'ABCD-EFGH-0003',

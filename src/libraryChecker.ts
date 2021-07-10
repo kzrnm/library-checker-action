@@ -12,8 +12,6 @@ export class LibraryChecker {
   private readonly id: string
   private readonly execOpts: ExecOptions
 
-  private restoredHash?: string
-
   constructor(libraryCheckerPath: string, commit: string) {
     this.libraryCheckerPath = libraryCheckerPath
     this.commit = commit
@@ -21,7 +19,13 @@ export class LibraryChecker {
     this.execOpts = {cwd: libraryCheckerPath}
   }
 
-  private async updateTimestampOfCachedFile(name: string): Promise<void> {
+  private lastCacheHash?: string
+
+  async getCacheHash(): Promise<string> {
+    return glob.hashFiles(this.getCachePath().join('\n'))
+  }
+
+  async updateTimestampOfCachedFile(name: string): Promise<void> {
     const globber = await glob.create(
       [
         path.join(this.libraryCheckerPath, '**', name, 'checker'),
@@ -31,12 +35,9 @@ export class LibraryChecker {
     )
     const now = new Date()
     for await (const file of globber.globGenerator()) {
+      core.debug(`update utime and mtime: ${file}`)
       await fs.promises.utimes(file, now, now)
     }
-  }
-
-  private async resolveCachedFileHash(): Promise<string> {
-    return await glob.hashFiles(this.getCachePath().join('\n'))
   }
 
   private getCacheDataPath(): string {
@@ -75,8 +76,8 @@ export class LibraryChecker {
       if (cacheKey === undefined) {
         core.info(`Cache is not found`)
       } else {
-        this.restoredHash = await this.resolveCachedFileHash()
         core.info(`Restore problems from cache = ${cacheKey}`)
+        this.lastCacheHash = await this.getCacheHash()
       }
       await exec(
         'pip3',
@@ -122,51 +123,69 @@ export class LibraryChecker {
     }
   }
 
-  async checkCached(
-    problemNames: string[]
-  ): Promise<[string[], string[], string[]]> {
+  async checkCached(problemNames: string[]): Promise<{
+    targets: {[name: string]: string | undefined}
+    addeds: string[]
+    notFounds: string[]
+  }> {
     const current: {[name: string]: string | undefined} = await this.problems()
     const cached: {[name: string]: string | undefined} =
       await this.cachedProblems()
 
-    const generated: string[] = []
-    const added: string[] = []
-    const notFound: string[] = []
+    const targets: {[name: string]: string | undefined} = {}
+    const addeds: string[] = []
+    const notFounds: string[] = []
     for (const name of problemNames) {
       const version = current[name]
       if (version) {
-        if (cached[name]) {
-          generated.push(name)
-        } else {
-          added.push(name)
+        targets[name] = version
+        if (version !== cached[name]) {
+          addeds.push(name)
         }
       } else {
-        notFound.push(name)
+        notFounds.push(name)
       }
     }
-    return [generated, added, notFound]
+    return {targets, addeds, notFounds}
   }
 
   /**
    * generate problems
    */
   async generate(problemNames: string[]): Promise<void> {
-    await core.group('setup Library Checker Problems', async () => {
-      const [generated, added, notFound] = await this.checkCached(problemNames)
-      if (notFound.length > 0) {
-        core.warning(`Problems are not found: ${notFound.join(', ')}`)
-      }
-      if (added.length === 0) {
-        core.info('Cache is not updated.')
-        return
-      }
+    const {targets, addeds, notFounds} = await this.checkCached(problemNames)
+    if (notFounds.length > 0) {
+      core.warning(`Problems are not found: ${notFounds.join(', ')}`)
+    }
 
+    await core.group('setup Library Checker Problems', async () => {
+      const addedsSet = new Set(addeds)
+      const targetNames = Object.keys(targets)
+      const cached = targetNames.filter(n => !addedsSet.has(n))
+      if (cached.length > 0) {
+        core.debug(`cached: ${cached.join(', ')}`)
+      } else {
+        core.debug('cached target is empty')
+      }
       await Promise.all(
-        generated.map(async n => await this.updateTimestampOfCachedFile(n))
+        cached.map(async n => await this.updateTimestampOfCachedFile(n))
       )
-      await exec('python3', ['generate.py', '-p', ...added], this.execOpts)
+
+      await exec(
+        'python3',
+        ['generate.py', '-p', ...targetNames],
+        this.execOpts
+      )
 
       try {
+        await fs.promises.writeFile(
+          this.getCacheDataPath(),
+          JSON.stringify(targets)
+        )
+        if (this.lastCacheHash === (await this.getCacheHash())) {
+          core.info('Cache is not updated.')
+          return
+        }
         const cacheId = await cache.saveCache(
           this.getCachePath(),
           this.getCacheKey()

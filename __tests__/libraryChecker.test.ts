@@ -5,21 +5,155 @@ import path from 'path'
 import {LibraryChecker} from '../src/libraryChecker'
 import {getMockedLogger} from './util'
 
-test('generate', async () => {
-  jest.spyOn(cache, 'saveCache').mockResolvedValue(0)
-  const execMock = jest.spyOn(exec, 'exec').mockResolvedValueOnce(0)
-  getMockedLogger()
-  const libraryChecker = new LibraryChecker(__dirname, 'HEAD')
-  await libraryChecker.generate(['aplusb', 'unionfind'])
-  expect(execMock).toBeCalledTimes(1)
-  expect(execMock).toBeCalledWith(
-    'python3',
-    ['generate.py', '-p', 'aplusb', 'unionfind'],
-    {cwd: __dirname}
-  )
+describe('generate', () => {
+  let libraryChecker: LibraryChecker
+  beforeEach(() => {
+    jest.clearAllMocks()
+    jest.spyOn(fs.promises, 'writeFile').mockResolvedValue()
+    jest.spyOn(cache, 'saveCache').mockResolvedValue(0)
+    libraryChecker = new LibraryChecker(__dirname, 'HEAD')
+    jest.spyOn(libraryChecker, 'problems').mockResolvedValue({
+      aplusb: 'version',
+      unionfind: 'version',
+      many_aplusb: 'version'
+    })
+    jest
+      .spyOn(libraryChecker, 'updateTimestampOfCachedFile')
+      .mockResolvedValue()
+    jest.spyOn(libraryChecker, 'getCacheHash').mockResolvedValue('cache-hash')
+  })
+  describe('not updated cache', () => {
+    test('hit all cache', async () => {
+      Object.defineProperty(libraryChecker, 'lastCacheHash', {
+        value: 'cache-hash'
+      })
+
+      const execMock = jest.spyOn(exec, 'exec').mockResolvedValueOnce(0)
+      const mockedLogger = getMockedLogger()
+      jest.spyOn(libraryChecker, 'cachedProblems').mockResolvedValue({
+        aplusb: 'version',
+        unionfind: 'version',
+        many_aplusb: 'version'
+      })
+
+      await libraryChecker.generate(['aplusb', 'unionfind', 'many_aplusb'])
+      expect(execMock).toBeCalledTimes(1)
+      expect(execMock).toBeCalledWith(
+        'python3',
+        ['generate.py', '-p', 'aplusb', 'unionfind', 'many_aplusb'],
+        {cwd: __dirname}
+      )
+      expect(mockedLogger.mock.calls).toEqual([
+        ['startGroup', 'setup Library Checker Problems'],
+        ['debug', 'cached: aplusb, unionfind, many_aplusb'],
+        ['info', 'Cache is not updated.'],
+        ['endGroup', '']
+      ])
+    })
+  })
+
+  describe('updated cache', () => {
+    test('hit no cache', async () => {
+      const execMock = jest.spyOn(exec, 'exec').mockResolvedValueOnce(0)
+      const mockedLogger = getMockedLogger()
+      jest.spyOn(libraryChecker, 'cachedProblems').mockResolvedValue({})
+
+      await libraryChecker.generate(['aplusb', 'unionfind', 'many_aplusb'])
+      expect(execMock).toBeCalledTimes(1)
+      expect(execMock).toBeCalledWith(
+        'python3',
+        ['generate.py', '-p', 'aplusb', 'unionfind', 'many_aplusb'],
+        {cwd: __dirname}
+      )
+      expect(mockedLogger.mock.calls).toEqual([
+        ['startGroup', 'setup Library Checker Problems'],
+        ['debug', 'cached target is empty'],
+        ['info', 'Cache problems. id = 0'],
+        ['endGroup', '']
+      ])
+    })
+
+    test('hit some cache', async () => {
+      const execMock = jest.spyOn(exec, 'exec').mockResolvedValueOnce(0)
+      const mockedLogger = getMockedLogger()
+      jest.spyOn(libraryChecker, 'cachedProblems').mockResolvedValue({
+        aplusb: 'version',
+        many_aplusb: 'version'
+      })
+      await libraryChecker.generate(['aplusb', 'unionfind', 'many_aplusb'])
+      expect(execMock).toBeCalledTimes(1)
+      expect(execMock).toBeCalledWith(
+        'python3',
+        ['generate.py', '-p', 'aplusb', 'unionfind', 'many_aplusb'],
+        {cwd: __dirname}
+      )
+      expect(mockedLogger.mock.calls).toEqual([
+        ['startGroup', 'setup Library Checker Problems'],
+        ['debug', 'cached: aplusb, many_aplusb'],
+        ['info', 'Cache problems. id = 0'],
+        ['endGroup', '']
+      ])
+    })
+
+    test('hit all cache', async () => {
+      const execMock = jest.spyOn(exec, 'exec').mockResolvedValueOnce(0)
+      const mockedLogger = getMockedLogger()
+      jest.spyOn(libraryChecker, 'cachedProblems').mockResolvedValue({
+        aplusb: 'version',
+        unionfind: 'version',
+        many_aplusb: 'version'
+      })
+
+      await libraryChecker.generate(['aplusb', 'unionfind', 'many_aplusb'])
+      expect(execMock).toBeCalledTimes(1)
+      expect(execMock).toBeCalledWith(
+        'python3',
+        ['generate.py', '-p', 'aplusb', 'unionfind', 'many_aplusb'],
+        {cwd: __dirname}
+      )
+      expect(mockedLogger.mock.calls).toEqual([
+        ['startGroup', 'setup Library Checker Problems'],
+        ['debug', 'cached: aplusb, unionfind, many_aplusb'],
+        ['info', 'Cache problems. id = 0'],
+        ['endGroup', '']
+      ])
+    })
+
+    test('hit all cache with not found', async () => {
+      const execMock = jest.spyOn(exec, 'exec').mockResolvedValueOnce(0)
+      const mockedLogger = getMockedLogger()
+      jest.spyOn(libraryChecker, 'cachedProblems').mockResolvedValue({
+        aplusb: 'version',
+        unionfind: 'version',
+        many_aplusb: 'version'
+      })
+
+      await libraryChecker.generate([
+        'aplusb',
+        'unionfind',
+        'many_aplusb',
+        'notfound',
+        'anything'
+      ])
+      expect(execMock).toBeCalledTimes(1)
+      expect(execMock).toBeCalledWith(
+        'python3',
+        ['generate.py', '-p', 'aplusb', 'unionfind', 'many_aplusb'],
+        {cwd: __dirname}
+      )
+      expect(mockedLogger.mock.calls).toEqual([
+        ['warning', 'Problems are not found: notfound, anything'],
+        ['startGroup', 'setup Library Checker Problems'],
+        ['debug', 'cached: aplusb, unionfind, many_aplusb'],
+        ['info', 'Cache problems. id = 0'],
+        ['endGroup', '']
+      ])
+    })
+  })
 })
 
 test('problems', async () => {
+  jest.clearAllMocks()
   const versions = await fs.promises.readFile(
     path.join(__dirname, 'versions.json')
   )

@@ -24,10 +24,10 @@ export function getMockedLogger(): jest.Mock<
     .spyOn(core, 'endGroup')
     .mockImplementation(() => mockedLogger('endGroup', ''))
 
-  jest.spyOn(core, 'group').mockImplementation((name, fn) => {
+  jest.spyOn(core, 'group').mockImplementation(async (name, fn) => {
     mockedLogger('startGroup', name)
     try {
-      return fn()
+      return await fn()
     } finally {
       mockedLogger('endGroup', '')
     }

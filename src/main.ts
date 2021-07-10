@@ -1,7 +1,6 @@
 import * as core from '@actions/core'
 import {getExecOutput} from '@actions/exec'
 import * as command from './command'
-import fs from 'fs'
 import {GitRepositoryCloner} from './github'
 import {LibraryChecker} from './libraryChecker'
 
