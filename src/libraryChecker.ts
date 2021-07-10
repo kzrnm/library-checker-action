@@ -1,8 +1,9 @@
 import * as cache from '@actions/cache'
 import * as core from '@actions/core'
 import * as glob from '@actions/glob'
-import {exec, getExecOutput, ExecOptions} from '@actions/exec'
+import fs from 'fs'
 import path from 'path'
+import {exec, getExecOutput, ExecOptions} from '@actions/exec'
 import {v1 as uuidv1} from 'uuid'
 export class LibraryChecker {
   private static CACHE_KEY_PREFIX = 'LibraryCheckerAction-'
@@ -20,7 +21,15 @@ export class LibraryChecker {
     this.execOpts = {cwd: libraryCheckerPath}
   }
 
-  private async resolveCacheFileHash(): Promise<string> {
+  private async updateTimestampOfCachedFile(): Promise<void> {
+    const globber = await glob.create(this.getCachePath().join('\n'))
+    const now = new Date()
+    for await (const file of globber.globGenerator()) {
+      await fs.promises.utimes(file, now, now)
+    }
+  }
+
+  private async resolveCachedFileHash(): Promise<string> {
     return await glob.hashFiles(this.getCachePath().join('\n'))
   }
 
@@ -55,7 +64,8 @@ export class LibraryChecker {
       if (cacheKey === undefined) {
         core.info(`Cache is not found`)
       } else {
-        this.restoredHash = await this.resolveCacheFileHash()
+        await this.updateTimestampOfCachedFile()
+        this.restoredHash = await this.resolveCachedFileHash()
         core.info(`Restore problems from cache = ${cacheKey}`)
       }
       await exec(
@@ -103,7 +113,7 @@ export class LibraryChecker {
       )
 
       try {
-        if (this.restoredHash === (await this.resolveCacheFileHash())) {
+        if (this.restoredHash === (await this.resolveCachedFileHash())) {
           core.info('Cache is not updated.')
         } else {
           const cacheId = await cache.saveCache(

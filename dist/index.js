@@ -128,6 +128,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __asyncValues = (this && this.__asyncValues) || function (o) {
+    if (!Symbol.asyncIterator) throw new TypeError("Symbol.asyncIterator is not defined.");
+    var m = o[Symbol.asyncIterator], i;
+    return m ? m.call(o) : (o = typeof __values === "function" ? __values(o) : o[Symbol.iterator](), i = {}, verb("next"), verb("throw"), verb("return"), i[Symbol.asyncIterator] = function () { return this; }, i);
+    function verb(n) { i[n] = o[n] && function (v) { return new Promise(function (resolve, reject) { v = o[n](v), settle(resolve, reject, v.done, v.value); }); }; }
+    function settle(resolve, reject, d, v) { Promise.resolve(v).then(function(v) { resolve({ value: v, done: d }); }, reject); }
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -136,8 +143,9 @@ exports.LibraryChecker = void 0;
 const cache = __importStar(__nccwpck_require__(7799));
 const core = __importStar(__nccwpck_require__(2186));
 const glob = __importStar(__nccwpck_require__(8090));
-const exec_1 = __nccwpck_require__(1514);
+const fs_1 = __importDefault(__nccwpck_require__(5747));
 const path_1 = __importDefault(__nccwpck_require__(5622));
+const exec_1 = __nccwpck_require__(1514);
 const uuid_1 = __nccwpck_require__(5840);
 class LibraryChecker {
     constructor(libraryCheckerPath, commit) {
@@ -146,7 +154,27 @@ class LibraryChecker {
         this.id = uuid_1.v1();
         this.execOpts = { cwd: libraryCheckerPath };
     }
-    resolveCacheFileHash() {
+    updateTimestampOfCachedFile() {
+        var e_1, _a;
+        return __awaiter(this, void 0, void 0, function* () {
+            const globber = yield glob.create(this.getCachePath().join('\n'));
+            const now = new Date();
+            try {
+                for (var _b = __asyncValues(globber.globGenerator()), _c; _c = yield _b.next(), !_c.done;) {
+                    const file = _c.value;
+                    yield fs_1.default.promises.utimes(file, now, now);
+                }
+            }
+            catch (e_1_1) { e_1 = { error: e_1_1 }; }
+            finally {
+                try {
+                    if (_c && !_c.done && (_a = _b.return)) yield _a.call(_b);
+                }
+                finally { if (e_1) throw e_1.error; }
+            }
+        });
+    }
+    resolveCachedFileHash() {
         return __awaiter(this, void 0, void 0, function* () {
             return yield glob.hashFiles(this.getCachePath().join('\n'));
         });
@@ -179,7 +207,8 @@ class LibraryChecker {
                     core.info(`Cache is not found`);
                 }
                 else {
-                    this.restoredHash = yield this.resolveCacheFileHash();
+                    yield this.updateTimestampOfCachedFile();
+                    this.restoredHash = yield this.resolveCachedFileHash();
                     core.info(`Restore problems from cache = ${cacheKey}`);
                 }
                 yield exec_1.exec('pip3', ['install', '--user', '-r', 'requirements.txt'], this.execOpts);
@@ -216,7 +245,7 @@ class LibraryChecker {
             yield core.group('setup Library Checker Problems', () => __awaiter(this, void 0, void 0, function* () {
                 yield exec_1.exec('python3', ['generate.py', '-p', ...problemNames], this.execOpts);
                 try {
-                    if (this.restoredHash === (yield this.resolveCacheFileHash())) {
+                    if (this.restoredHash === (yield this.resolveCachedFileHash())) {
                         core.info('Cache is not updated.');
                     }
                     else {
