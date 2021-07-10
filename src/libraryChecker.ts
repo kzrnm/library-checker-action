@@ -1,33 +1,61 @@
 import * as cache from '@actions/cache'
 import * as core from '@actions/core'
+import * as glob from '@actions/glob'
 import {exec, getExecOutput, ExecOptions} from '@actions/exec'
 import path from 'path'
+import {v1 as uuidv1} from 'uuid'
 export class LibraryChecker {
-  private static CACHE_KEY_PREFIX = 'LibraryCheckerAction-cache-'
-  private readonly cacheKey: string
+  private static CACHE_KEY_PREFIX = 'LibraryCheckerAction-'
   private readonly libraryCheckerPath: string
-  private execOpts: ExecOptions
+  private readonly commit: string
+  private readonly id: string
+  private readonly execOpts: ExecOptions
 
-  constructor(libraryCheckerPath: string) {
+  private restoredHash?: string
+
+  constructor(libraryCheckerPath: string, commit: string) {
     this.libraryCheckerPath = libraryCheckerPath
-    const jobId = process.env['GITHUB_JOB']
-    this.cacheKey = `${LibraryChecker.CACHE_KEY_PREFIX}${jobId}`
+    this.commit = commit
+    this.id = uuidv1()
     this.execOpts = {cwd: libraryCheckerPath}
   }
 
+  private async resolveCacheFileHash(): Promise<string> {
+    return await glob.hashFiles(this.getCachePath().join('\n'))
+  }
+
+  private getCachePath(): string[] {
+    return [
+      path.join(this.libraryCheckerPath, '**', 'checker'),
+      path.join(this.libraryCheckerPath, '**', 'in'),
+      path.join(this.libraryCheckerPath, '**', 'out')
+    ]
+  }
+
+  private getCacheKey(): string {
+    return `${LibraryChecker.CACHE_KEY_PREFIX}${this.commit}-${this.id}`
+  }
+  private restoreCacheKey(): string[] {
+    return [
+      this.getCacheKey(),
+      `${LibraryChecker.CACHE_KEY_PREFIX}${this.commit}-`,
+      LibraryChecker.CACHE_KEY_PREFIX
+    ]
+  }
   /**
    * setup Library Checker
    */
   async setup(): Promise<void> {
     await core.group('setup Library Checker Problems', async () => {
       const cacheKey = await cache.restoreCache(
-        [path.join(this.libraryCheckerPath, '**', 'in')],
-        this.cacheKey,
-        [LibraryChecker.CACHE_KEY_PREFIX]
+        this.getCachePath(),
+        this.getCacheKey(),
+        this.restoreCacheKey()
       )
       if (cacheKey === undefined) {
         core.info(`Cache is not found`)
       } else {
+        this.restoredHash = await this.resolveCacheFileHash()
         core.info(`Restore problems from cache = ${cacheKey}`)
       }
       await exec(
@@ -75,11 +103,15 @@ export class LibraryChecker {
       )
 
       try {
-        const cacheId = await cache.saveCache(
-          [path.join(this.libraryCheckerPath, '**', 'in')],
-          this.cacheKey
-        )
-        core.info(`Cache problems. id = ${cacheId}`)
+        if (this.restoredHash === (await this.resolveCacheFileHash())) {
+          core.info('Cache is not updated.')
+        } else {
+          const cacheId = await cache.saveCache(
+            this.getCachePath(),
+            this.getCacheKey()
+          )
+          core.info(`Cache problems. id = ${cacheId}`)
+        }
       } catch (e) {
         core.warning(e)
       }

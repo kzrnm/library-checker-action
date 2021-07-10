@@ -1,5 +1,5 @@
 import {GitRepositoryCloner} from '../src/github'
-import fs from 'fs'
+
 jest.mock('git-clone')
 const clone = require('git-clone')
 clone.mockImplementation(
@@ -11,7 +11,7 @@ clone.mockImplementation(
 describe('checkout repository', () => {
   beforeEach(() => {
     clone.mockClear()
-    process.env['GITHUB_WORKSPACE'] = '/tmp/test'
+    process.env['GITHUB_WORKSPACE'] = '~'
   })
   afterAll(() => {
     process.env['GITHUB_WORKSPACE'] = undefined
@@ -22,7 +22,7 @@ describe('checkout repository', () => {
       'https://github.com/naminodarie/library-checker-action'
     )
     const dir = await gh.checkoutRepository()
-    expect(dir).toBe('/tmp/test/library-checker-action')
+    expect(dir).toMatch(/~.library-checker-problems/)
 
     expect(clone).toBeCalledTimes(1)
     expect(clone).toBeCalledWith(
@@ -39,7 +39,7 @@ describe('checkout repository', () => {
       'commit-hash'
     )
     const dir = await gh.checkoutRepository()
-    expect(dir).toBe('/tmp/test/library-checker-action')
+    expect(dir).toMatch(/~.library-checker-problems/)
 
     expect(clone).toBeCalledTimes(1)
     expect(clone).toBeCalledWith(

@@ -1,6 +1,7 @@
 import * as core from '@actions/core'
-import {GitRepositoryCloner} from './github'
+import {getExecOutput} from '@actions/exec'
 import * as command from './command'
+import {GitRepositoryCloner} from './github'
 import {LibraryChecker, Problem} from './libraryChecker'
 
 interface InputObject {
@@ -23,6 +24,24 @@ export function parseInput(
     commit: commit || undefined,
     listProblemsCommand: listProblemsCommand || undefined
   }
+}
+
+async function createLibraryChecker(
+  repositoryName: string,
+  commit?: string
+): Promise<LibraryChecker> {
+  const libraryCheckerPath = await checkout(repositoryName, commit)
+  const libraryCheckerCommit = await getExecOutput(
+    'git',
+    ['rev-parse', 'HEAD'],
+    {
+      cwd: libraryCheckerPath
+    }
+  )
+  return new LibraryChecker(
+    libraryCheckerPath,
+    libraryCheckerCommit.stdout.trim()
+  )
 }
 
 /**
@@ -71,9 +90,7 @@ async function run(): Promise<void> {
     const {repositoryName, commit, listProblemsCommand} = parseInput(
       core.getInput
     )
-    const libraryChecker = new LibraryChecker(
-      await checkout(repositoryName, commit)
-    )
+    const libraryChecker = await createLibraryChecker(repositoryName, commit)
     await libraryChecker.setup()
 
     const allProblems = await libraryChecker.problems()

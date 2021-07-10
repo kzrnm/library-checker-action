@@ -9,7 +9,7 @@ test('generate', async () => {
   jest.spyOn(cache, 'saveCache').mockResolvedValue(0)
   const execMock = jest.spyOn(exec, 'exec').mockResolvedValueOnce(0)
   getMockedLogger()
-  const libraryChecker = new LibraryChecker(__dirname)
+  const libraryChecker = new LibraryChecker(__dirname, 'HEAD')
   await libraryChecker.generate(['aplusb', 'unionfind'])
   expect(execMock).toBeCalledTimes(1)
   expect(execMock).toBeCalledWith(
@@ -31,7 +31,7 @@ test('problems', async () => {
   })
   getMockedLogger()
 
-  const libraryChecker = new LibraryChecker(__dirname)
+  const libraryChecker = new LibraryChecker(__dirname, 'HEAD')
   expect(libraryChecker.problems()).resolves.toStrictEqual([
     {
       name: 'aplusb',
