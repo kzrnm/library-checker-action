@@ -86,7 +86,7 @@ export class LibraryChecker {
   /**
    * @returns Library Checker problems
    */
-  async problems(): Promise<Problem[]> {
+  async problems(): Promise<{[name: string]: string}> {
     const versions = await (async () => {
       const out = await getExecOutput(
         'python3',
@@ -95,10 +95,7 @@ export class LibraryChecker {
       )
       return out.stdout
     })()
-    return Object.entries(JSON.parse(versions)).map(t => ({
-      name: t[0],
-      version: t[1] as string
-    }))
+    return JSON.parse(versions)
   }
 
   /**
@@ -127,9 +124,4 @@ export class LibraryChecker {
       }
     })
   }
-}
-
-export interface Problem {
-  name: string
-  version: string
 }

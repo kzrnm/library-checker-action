@@ -2,7 +2,7 @@ import * as core from '@actions/core'
 import {getExecOutput} from '@actions/exec'
 import * as command from './command'
 import {GitRepositoryCloner} from './github'
-import {LibraryChecker, Problem} from './libraryChecker'
+import {LibraryChecker} from './libraryChecker'
 
 interface InputObject {
   repositoryName: string
@@ -59,10 +59,12 @@ export async function checkout(
   return libraryChecker
 }
 
-export async function printProblems(problems: Problem[]): Promise<void> {
+export async function printProblems(problems: {
+  [name: string]: string
+}): Promise<void> {
   core.group('Library Checker Problems', async () => {
-    for (const p of problems) {
-      core.info(`${p.name}: ${p.version}`)
+    for (const [name, version] of Object.entries(problems)) {
+      core.info(`${name}: ${version}`)
     }
   })
 }
@@ -97,8 +99,7 @@ async function run(): Promise<void> {
     await printProblems(allProblems)
 
     const listProblems =
-      (await getListProblems(listProblemsCommand)) ??
-      allProblems.map(p => p.name)
+      (await getListProblems(listProblemsCommand)) ?? Object.keys(allProblems)
     await libraryChecker.generate(listProblems)
   } catch (error) {
     core.setFailed(error.message)

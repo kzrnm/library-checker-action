@@ -231,10 +231,7 @@ class LibraryChecker {
                 const out = yield exec_1.getExecOutput('python3', ['ci_generate.py', '--print-version'], Object.assign({ silent: true }, this.execOpts));
                 return out.stdout;
             }))();
-            return Object.entries(JSON.parse(versions)).map(t => ({
-                name: t[0],
-                version: t[1]
-            }));
+            return JSON.parse(versions);
         });
     }
     /**
@@ -343,8 +340,8 @@ exports.checkout = checkout;
 function printProblems(problems) {
     return __awaiter(this, void 0, void 0, function* () {
         core.group('Library Checker Problems', () => __awaiter(this, void 0, void 0, function* () {
-            for (const p of problems) {
-                core.info(`${p.name}: ${p.version}`);
+            for (const [name, version] of Object.entries(problems)) {
+                core.info(`${name}: ${version}`);
             }
         }));
     });

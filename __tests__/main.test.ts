@@ -73,12 +73,12 @@ describe('checkout library checker', () => {
 
 test('printProblems', () => {
   const mockedLogger = getMockedLogger()
-  main.printProblems([
-    {name: 'pro1', version: 'ABCD-EFGH-0001'},
-    {name: 'pro2', version: 'ABCD-EFGH-0002'},
-    {name: 'pro3', version: 'ABCD-EFGH-0003'},
-    {name: 'pro4', version: 'ABCD-EFGH-0004'}
-  ])
+  main.printProblems({
+    pro1: 'ABCD-EFGH-0001',
+    pro2: 'ABCD-EFGH-0002',
+    pro3: 'ABCD-EFGH-0003',
+    pro4: 'ABCD-EFGH-0004'
+  })
 
   expect(mockedLogger).toBeCalledTimes(6)
   expect(mockedLogger).toHaveBeenNthCalledWith(
