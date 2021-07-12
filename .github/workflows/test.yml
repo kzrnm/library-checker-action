@@ -28,3 +28,4 @@ jobs:
       - uses: ./
         with:
           list-problems: 'echo dummy aplusb many_aplusb'
+          cache-test-data: true
