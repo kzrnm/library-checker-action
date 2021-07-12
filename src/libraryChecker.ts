@@ -6,17 +6,29 @@ import fs from 'fs'
 import path from 'path'
 import {v1 as uuidv1} from 'uuid'
 import stringify from 'json-stable-stringify'
+
+export interface LibraryCheckerOptions {
+  useCache?: boolean
+}
+
 export class LibraryChecker {
-  private static CACHE_KEY_PREFIX = 'LibraryCheckerAction-'
+  private static CACHE_KEY_PREFIX = 'LibraryCheckerAction'
   private readonly libraryCheckerPath: string
   private readonly commit: string
   private readonly id: string
   private readonly execOpts: ExecOptions
 
-  constructor(libraryCheckerPath: string, commit: string) {
+  private readonly options: LibraryCheckerOptions
+
+  constructor(
+    libraryCheckerPath: string,
+    commit: string,
+    options?: LibraryCheckerOptions
+  ) {
     this.libraryCheckerPath = libraryCheckerPath
     this.commit = commit
     this.id = uuidv1()
+    this.options = options || {}
     this.execOpts = {cwd: libraryCheckerPath}
   }
 
@@ -54,32 +66,44 @@ export class LibraryChecker {
     ]
   }
 
-  private getCacheKey(): string {
-    return `${LibraryChecker.CACHE_KEY_PREFIX}${process.platform}-${this.commit}-${this.id}`
-  }
-  private restoreCacheKey(): string[] {
+  private getCacheKeyArray(): string[] {
     return [
-      this.getCacheKey(),
-      `${LibraryChecker.CACHE_KEY_PREFIX}${process.platform}-${this.commit}-`,
-      `${LibraryChecker.CACHE_KEY_PREFIX}${process.platform}-`,
-      LibraryChecker.CACHE_KEY_PREFIX
+      LibraryChecker.CACHE_KEY_PREFIX,
+      process.platform,
+      this.commit,
+      this.id
     ]
+  }
+
+  getCacheKey(): string {
+    return this.getCacheKeyArray().join('-')
+  }
+
+  restoreCacheKey(): string[] {
+    const keyArray = this.getCacheKeyArray()
+    const result = []
+    for (let i = keyArray.length - 1; i > 0; i--) {
+      result.push(`${keyArray.slice(0, i).join('-')}-`)
+    }
+    return result
   }
   /**
    * setup Library Checker
    */
   async setup(): Promise<void> {
     await core.group('setup Library Checker', async () => {
-      const cacheKey = await cache.restoreCache(
-        this.getCachePath(),
-        this.getCacheKey(),
-        this.restoreCacheKey()
-      )
-      if (cacheKey === undefined) {
-        core.info(`Cache is not found`)
-      } else {
-        core.info(`Restore problems from cache = ${cacheKey}`)
-        this.lastCacheHash = await this.getCacheHash()
+      if (this.options.useCache) {
+        const cacheKey = await cache.restoreCache(
+          this.getCachePath(),
+          this.getCacheKey(),
+          this.restoreCacheKey()
+        )
+        if (cacheKey === undefined) {
+          core.info(`Cache is not found`)
+        } else {
+          core.info(`Restore problems from cache = ${cacheKey}`)
+          this.lastCacheHash = await this.getCacheHash()
+        }
       }
       await exec(
         'pip3',
@@ -178,20 +202,24 @@ export class LibraryChecker {
         ['generate.py', '-p', ...targetNames],
         this.execOpts
       )
-
-      try {
-        await fs.promises.writeFile(this.getCacheDataPath(), stringify(targets))
-        if (this.lastCacheHash === (await this.getCacheHash())) {
-          core.info('Cache is not updated.')
-          return
+      if (this.options.useCache) {
+        try {
+          await fs.promises.writeFile(
+            this.getCacheDataPath(),
+            stringify(targets)
+          )
+          if (this.lastCacheHash === (await this.getCacheHash())) {
+            core.info('Cache is not updated.')
+            return
+          }
+          const cacheId = await cache.saveCache(
+            this.getCachePath(),
+            this.getCacheKey()
+          )
+          core.info(`Cache problems. id = ${cacheId}`)
+        } catch (e) {
+          core.warning(e)
         }
-        const cacheId = await cache.saveCache(
-          this.getCachePath(),
-          this.getCacheKey()
-        )
-        core.info(`Cache problems. id = ${cacheId}`)
-      } catch (e) {
-        core.warning(e)
       }
     })
   }

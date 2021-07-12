@@ -32,6 +32,15 @@ The output must be whitespace delimited.
 
 If the output is empty, this action checks all problems.
 
+### cache-test-data
+
+**Option** 
+
+If true, the action cache test datas.
+
+- `false`: `""`, `"false"`, `"0"`
+- `true`: otherwise
+
 ## Output
 
 

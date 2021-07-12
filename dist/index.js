@@ -149,10 +149,11 @@ const path_1 = __importDefault(__nccwpck_require__(5622));
 const uuid_1 = __nccwpck_require__(5840);
 const json_stable_stringify_1 = __importDefault(__nccwpck_require__(6645));
 class LibraryChecker {
-    constructor(libraryCheckerPath, commit) {
+    constructor(libraryCheckerPath, commit, options) {
         this.libraryCheckerPath = libraryCheckerPath;
         this.commit = commit;
         this.id = uuid_1.v1();
+        this.options = options || {};
         this.execOpts = { cwd: libraryCheckerPath };
     }
     getCacheHash() {
@@ -196,16 +197,24 @@ class LibraryChecker {
             path_1.default.join(this.libraryCheckerPath, '**', 'out')
         ];
     }
+    getCacheKeyArray() {
+        return [
+            LibraryChecker.CACHE_KEY_PREFIX,
+            process.platform,
+            this.commit,
+            this.id
+        ];
+    }
     getCacheKey() {
-        return `${LibraryChecker.CACHE_KEY_PREFIX}${process.platform}-${this.commit}-${this.id}`;
+        return this.getCacheKeyArray().join('-');
     }
     restoreCacheKey() {
-        return [
-            this.getCacheKey(),
-            `${LibraryChecker.CACHE_KEY_PREFIX}${process.platform}-${this.commit}-`,
-            `${LibraryChecker.CACHE_KEY_PREFIX}${process.platform}-`,
-            LibraryChecker.CACHE_KEY_PREFIX
-        ];
+        const keyArray = this.getCacheKeyArray();
+        const result = [];
+        for (let i = keyArray.length - 1; i > 0; i--) {
+            result.push(`${keyArray.slice(0, i).join('-')}-`);
+        }
+        return result;
     }
     /**
      * setup Library Checker
@@ -213,13 +222,15 @@ class LibraryChecker {
     setup() {
         return __awaiter(this, void 0, void 0, function* () {
             yield core.group('setup Library Checker', () => __awaiter(this, void 0, void 0, function* () {
-                const cacheKey = yield cache.restoreCache(this.getCachePath(), this.getCacheKey(), this.restoreCacheKey());
-                if (cacheKey === undefined) {
-                    core.info(`Cache is not found`);
-                }
-                else {
-                    core.info(`Restore problems from cache = ${cacheKey}`);
-                    this.lastCacheHash = yield this.getCacheHash();
+                if (this.options.useCache) {
+                    const cacheKey = yield cache.restoreCache(this.getCachePath(), this.getCacheKey(), this.restoreCacheKey());
+                    if (cacheKey === undefined) {
+                        core.info(`Cache is not found`);
+                    }
+                    else {
+                        core.info(`Restore problems from cache = ${cacheKey}`);
+                        this.lastCacheHash = yield this.getCacheHash();
+                    }
                 }
                 yield exec_1.exec('pip3', ['install', '--user', '-r', 'requirements.txt'], this.execOpts);
                 if (process.platform !== 'win32' && process.platform !== 'darwin') {
@@ -300,24 +311,26 @@ class LibraryChecker {
                 }
                 yield Promise.all(cached.map((n) => __awaiter(this, void 0, void 0, function* () { return yield this.updateTimestampOfCachedFile(n); })));
                 yield exec_1.exec('python3', ['generate.py', '-p', ...targetNames], this.execOpts);
-                try {
-                    yield fs_1.default.promises.writeFile(this.getCacheDataPath(), json_stable_stringify_1.default(targets));
-                    if (this.lastCacheHash === (yield this.getCacheHash())) {
-                        core.info('Cache is not updated.');
-                        return;
+                if (this.options.useCache) {
+                    try {
+                        yield fs_1.default.promises.writeFile(this.getCacheDataPath(), json_stable_stringify_1.default(targets));
+                        if (this.lastCacheHash === (yield this.getCacheHash())) {
+                            core.info('Cache is not updated.');
+                            return;
+                        }
+                        const cacheId = yield cache.saveCache(this.getCachePath(), this.getCacheKey());
+                        core.info(`Cache problems. id = ${cacheId}`);
                     }
-                    const cacheId = yield cache.saveCache(this.getCachePath(), this.getCacheKey());
-                    core.info(`Cache problems. id = ${cacheId}`);
-                }
-                catch (e) {
-                    core.warning(e);
+                    catch (e) {
+                        core.warning(e);
+                    }
                 }
             }));
         });
     }
 }
 exports.LibraryChecker = LibraryChecker;
-LibraryChecker.CACHE_KEY_PREFIX = 'LibraryCheckerAction-';
+LibraryChecker.CACHE_KEY_PREFIX = 'LibraryCheckerAction';
 
 
 /***/ }),
@@ -362,24 +375,32 @@ const exec_1 = __nccwpck_require__(1514);
 const command = __importStar(__nccwpck_require__(524));
 const github_1 = __nccwpck_require__(5928);
 const libraryChecker_1 = __nccwpck_require__(4638);
+function parseBoolean(str) {
+    if (str) {
+        return str !== '0' && str !== 'false';
+    }
+    return false;
+}
 function parseInput(getInputFunc) {
     const repositoryName = getInputFunc('repository-name');
     const commit = getInputFunc('commit');
     const listProblemsCommand = getInputFunc('list-problems');
+    const cacheTestData = parseBoolean(getInputFunc('cache-test-data'));
     return {
         repositoryName,
         commit: commit || undefined,
-        listProblemsCommand: listProblemsCommand || undefined
+        listProblemsCommand: listProblemsCommand || undefined,
+        cacheTestData
     };
 }
 exports.parseInput = parseInput;
-function createLibraryChecker(repositoryName, commit) {
+function createLibraryChecker(repositoryName, commit, cacheTestData) {
     return __awaiter(this, void 0, void 0, function* () {
         const libraryCheckerPath = yield checkout(repositoryName, commit);
         const libraryCheckerCommit = yield exec_1.getExecOutput('git', ['rev-parse', 'HEAD'], {
             cwd: libraryCheckerPath
         });
-        return new libraryChecker_1.LibraryChecker(libraryCheckerPath, libraryCheckerCommit.stdout.trim());
+        return new libraryChecker_1.LibraryChecker(libraryCheckerPath, libraryCheckerCommit.stdout.trim(), { useCache: cacheTestData });
     });
 }
 /**
@@ -429,8 +450,8 @@ function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             core.setCommandEcho(true);
-            const { repositoryName, commit, listProblemsCommand } = parseInput(core.getInput);
-            const libraryChecker = yield createLibraryChecker(repositoryName, commit);
+            const { repositoryName, commit, listProblemsCommand, cacheTestData } = parseInput(core.getInput);
+            const libraryChecker = yield createLibraryChecker(repositoryName, commit, cacheTestData);
             yield libraryChecker.setup();
             const allProblems = yield libraryChecker.problems();
             yield printProblems(allProblems);

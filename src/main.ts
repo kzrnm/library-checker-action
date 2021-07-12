@@ -8,6 +8,14 @@ interface InputObject {
   repositoryName: string
   commit?: string
   listProblemsCommand?: string
+  cacheTestData: boolean
+}
+
+function parseBoolean(str: string | undefined): boolean {
+  if (str) {
+    return str !== '0' && str !== 'false'
+  }
+  return false
 }
 
 export function parseInput(
@@ -19,16 +27,19 @@ export function parseInput(
   const repositoryName = getInputFunc('repository-name')
   const commit = getInputFunc('commit')
   const listProblemsCommand = getInputFunc('list-problems')
+  const cacheTestData = parseBoolean(getInputFunc('cache-test-data'))
   return {
     repositoryName,
     commit: commit || undefined,
-    listProblemsCommand: listProblemsCommand || undefined
+    listProblemsCommand: listProblemsCommand || undefined,
+    cacheTestData
   }
 }
 
 async function createLibraryChecker(
   repositoryName: string,
-  commit?: string
+  commit?: string,
+  cacheTestData?: boolean
 ): Promise<LibraryChecker> {
   const libraryCheckerPath = await checkout(repositoryName, commit)
   const libraryCheckerCommit = await getExecOutput(
@@ -40,7 +51,8 @@ async function createLibraryChecker(
   )
   return new LibraryChecker(
     libraryCheckerPath,
-    libraryCheckerCommit.stdout.trim()
+    libraryCheckerCommit.stdout.trim(),
+    {useCache: cacheTestData}
   )
 }
 
@@ -89,10 +101,13 @@ export async function getListProblems(
 async function run(): Promise<void> {
   try {
     core.setCommandEcho(true)
-    const {repositoryName, commit, listProblemsCommand} = parseInput(
-      core.getInput
+    const {repositoryName, commit, listProblemsCommand, cacheTestData} =
+      parseInput(core.getInput)
+    const libraryChecker = await createLibraryChecker(
+      repositoryName,
+      commit,
+      cacheTestData
     )
-    const libraryChecker = await createLibraryChecker(repositoryName, commit)
     await libraryChecker.setup()
 
     const allProblems = await libraryChecker.problems()

@@ -12,6 +12,10 @@ inputs:
   list-problems:
     required: false
     description: 'Command that lists the problems to check'
+  cache-test-data:
+    required: false
+    default: 'false'
+    description: 'If true, the action cache test datas'
 # outputs:
 
 # https://actions-cool.github.io/github-action-branding/

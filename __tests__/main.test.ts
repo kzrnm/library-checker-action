@@ -3,27 +3,68 @@ import * as gh from '../src/github'
 import {getMockedLogger} from './util'
 
 describe('parseInput', () => {
-  describe.each([undefined, 'repo'])('repository-name=%s', repositoryName => {
-    describe.each([undefined, 'commit-hash'])('commit=%s', commit => {
-      test.each([undefined, 'echo aplusb'])(
-        'list-problems=%s',
-        listProblemsCommand => {
-          const expected = {
-            repositoryName: repositoryName ?? '',
-            commit,
-            listProblemsCommand
-          }
-          const input: {[key: string]: string | undefined} = {
-            'repository-name': repositoryName,
-            commit: commit,
-            'list-problems': listProblemsCommand
-          }
-          expect(main.parseInput(name => input[name] || '')).toStrictEqual(
-            expected
-          )
-        }
-      )
-    })
+  test('parse default', () => {
+    const expected = {
+      repositoryName: '',
+      commit: undefined,
+      listProblemsCommand: undefined,
+      cacheTestData: false
+    }
+    expect(main.parseInput(() => '')).toStrictEqual(expected)
+  })
+
+  test.each`
+    input        | expectedInput
+    ${undefined} | ${undefined}
+    ${''}        | ${''}
+    ${'repo'}    | ${'repo'}
+  `('parse repository-name = $input', ({input, expectedInput}) => {
+    const expected = {
+      repositoryName: expectedInput,
+      commit: undefined,
+      listProblemsCommand: undefined,
+      cacheTestData: false
+    }
+    expect(
+      main.parseInput(name => (name === 'repository-name' ? input : ''))
+    ).toStrictEqual(expected)
+  })
+
+  test.each`
+    input          | expectedInput
+    ${undefined}   | ${undefined}
+    ${''}          | ${undefined}
+    ${'012ABCD34'} | ${'012ABCD34'}
+  `('parse commit = $input', ({input, expectedInput}) => {
+    const expected = {
+      repositoryName: '',
+      commit: expectedInput,
+      listProblemsCommand: undefined,
+      cacheTestData: false
+    }
+    expect(
+      main.parseInput(name => (name === 'commit' ? input : ''))
+    ).toStrictEqual(expected)
+  })
+
+  test.each`
+    input        | expectedInput
+    ${undefined} | ${false}
+    ${''}        | ${false}
+    ${'0'}       | ${false}
+    ${'false'}   | ${false}
+    ${'1'}       | ${true}
+    ${'true'}    | ${true}
+  `('parse cache-test-data = $input', ({input, expectedInput}) => {
+    const expected = {
+      repositoryName: '',
+      commit: undefined,
+      listProblemsCommand: undefined,
+      cacheTestData: expectedInput
+    }
+    expect(
+      main.parseInput(name => (name === 'cache-test-data' ? input : ''))
+    ).toStrictEqual(expected)
   })
 })
 

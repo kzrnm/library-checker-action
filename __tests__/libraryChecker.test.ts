@@ -11,7 +11,7 @@ describe('generate', () => {
     jest.clearAllMocks()
     jest.spyOn(fs.promises, 'writeFile').mockResolvedValue()
     jest.spyOn(cache, 'saveCache').mockResolvedValue(0)
-    libraryChecker = new LibraryChecker(__dirname, 'HEAD')
+    libraryChecker = new LibraryChecker(__dirname, 'HEAD', {useCache: true})
     jest.spyOn(libraryChecker, 'problems').mockResolvedValue({
       aplusb: 'version',
       unionfind: 'version',
