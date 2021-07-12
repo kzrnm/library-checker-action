@@ -87,23 +87,82 @@ export class LibraryChecker {
     }
     return result
   }
+
+  async checkCached(problemNames: string[]): Promise<{
+    targets: {[name: string]: string | undefined}
+    addeds: string[]
+    notFounds: string[]
+  }> {
+    const current: {[name: string]: string | undefined} = await this.problems()
+    const cached: {[name: string]: string | undefined} =
+      await this.cachedProblems()
+
+    const targets: {[name: string]: string | undefined} = {}
+    const addeds: string[] = []
+    const notFounds: string[] = []
+    for (const name of problemNames) {
+      const version = current[name]
+      if (version) {
+        targets[name] = version
+        if (version !== cached[name]) {
+          addeds.push(name)
+        }
+      } else {
+        notFounds.push(name)
+      }
+    }
+    return {targets, addeds, notFounds}
+  }
+
+  private async restoreCache(): Promise<void> {
+    const cacheKey = await cache.restoreCache(
+      this.getCachePath(),
+      this.getCacheKey(),
+      this.restoreCacheKey()
+    )
+    if (cacheKey === undefined) {
+      core.info(`Cache is not found`)
+    } else {
+      core.info(`Restore problems from cache = ${cacheKey}`)
+      this.lastCacheHash = await this.getCacheHash()
+    }
+  }
+
+  private async updateCache(): Promise<void> {
+    try {
+      const targets = await this.problems()
+      for (const [name] of Object.entries(targets)) {
+        const checker = await (
+          await glob.create(
+            path.join(this.libraryCheckerPath, '**', name, 'checker')
+          )
+        ).glob()
+        if (checker.length === 0) {
+          delete targets[name]
+        }
+      }
+      await fs.promises.writeFile(this.getCacheDataPath(), stringify(targets))
+      if (this.lastCacheHash === (await this.getCacheHash())) {
+        core.info('Cache is not updated.')
+        return
+      }
+      const cacheId = await cache.saveCache(
+        this.getCachePath(),
+        this.getCacheKey()
+      )
+      core.info(`Cache problems. id = ${cacheId}`)
+    } catch (e) {
+      core.warning(e)
+    }
+  }
+
   /**
    * setup Library Checker
    */
   async setup(): Promise<void> {
     await core.group('setup Library Checker', async () => {
       if (this.options.useCache) {
-        const cacheKey = await cache.restoreCache(
-          this.getCachePath(),
-          this.getCacheKey(),
-          this.restoreCacheKey()
-        )
-        if (cacheKey === undefined) {
-          core.info(`Cache is not found`)
-        } else {
-          core.info(`Restore problems from cache = ${cacheKey}`)
-          this.lastCacheHash = await this.getCacheHash()
-        }
+        this.restoreCache()
       }
       await exec(
         'pip3',
@@ -149,36 +208,25 @@ export class LibraryChecker {
     }
   }
 
-  async checkCached(problemNames: string[]): Promise<{
-    targets: {[name: string]: string | undefined}
-    addeds: string[]
-    notFounds: string[]
-  }> {
-    const current: {[name: string]: string | undefined} = await this.problems()
-    const cached: {[name: string]: string | undefined} =
-      await this.cachedProblems()
-
-    const targets: {[name: string]: string | undefined} = {}
-    const addeds: string[] = []
-    const notFounds: string[] = []
-    for (const name of problemNames) {
-      const version = current[name]
-      if (version) {
-        targets[name] = version
-        if (version !== cached[name]) {
-          addeds.push(name)
-        }
-      } else {
-        notFounds.push(name)
-      }
-    }
-    return {targets, addeds, notFounds}
+  async generateCore(
+    targetProblemNames: string[],
+    skipFunc: (problemName: string) => boolean
+  ): Promise<void> {
+    await Promise.all(
+      targetProblemNames.map(async n => {
+        if (!skipFunc(n))
+          await exec('python3', ['generate.py', '-p', n], this.execOpts)
+      })
+    )
   }
 
   /**
    * generate problems
    */
-  async generate(problemNames: string[]): Promise<void> {
+  async generate(
+    problemNames: string[],
+    skipFunc: (problemName: string) => boolean
+  ): Promise<void> {
     const {targets, addeds, notFounds} = await this.checkCached(problemNames)
     if (notFounds.length > 0) {
       core.warning(`Problems are not found: ${notFounds.join(', ')}`)
@@ -197,30 +245,13 @@ export class LibraryChecker {
         cached.map(async n => await this.updateTimestampOfCachedFile(n))
       )
 
-      await exec(
-        'python3',
-        ['generate.py', '-p', ...targetNames],
-        this.execOpts
-      )
-      if (this.options.useCache) {
-        try {
-          await fs.promises.writeFile(
-            this.getCacheDataPath(),
-            stringify(targets)
-          )
-          if (this.lastCacheHash === (await this.getCacheHash())) {
-            core.info('Cache is not updated.')
-            return
-          }
-          const cacheId = await cache.saveCache(
-            this.getCachePath(),
-            this.getCacheKey()
-          )
-          core.info(`Cache problems. id = ${cacheId}`)
-        } catch (e) {
-          core.warning(e)
-        }
-      }
+      await this.generateCore(targetNames, skipFunc)
     })
+  }
+
+  async dispose(): Promise<void> {
+    if (this.options.useCache) {
+      this.updateCache()
+    }
   }
 }

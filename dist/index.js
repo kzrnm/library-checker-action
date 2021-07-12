@@ -216,6 +216,63 @@ class LibraryChecker {
         }
         return result;
     }
+    checkCached(problemNames) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const current = yield this.problems();
+            const cached = yield this.cachedProblems();
+            const targets = {};
+            const addeds = [];
+            const notFounds = [];
+            for (const name of problemNames) {
+                const version = current[name];
+                if (version) {
+                    targets[name] = version;
+                    if (version !== cached[name]) {
+                        addeds.push(name);
+                    }
+                }
+                else {
+                    notFounds.push(name);
+                }
+            }
+            return { targets, addeds, notFounds };
+        });
+    }
+    restoreCache() {
+        return __awaiter(this, void 0, void 0, function* () {
+            const cacheKey = yield cache.restoreCache(this.getCachePath(), this.getCacheKey(), this.restoreCacheKey());
+            if (cacheKey === undefined) {
+                core.info(`Cache is not found`);
+            }
+            else {
+                core.info(`Restore problems from cache = ${cacheKey}`);
+                this.lastCacheHash = yield this.getCacheHash();
+            }
+        });
+    }
+    updateCache() {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const targets = yield this.problems();
+                for (const [name] of Object.entries(targets)) {
+                    const checker = yield (yield glob.create(path_1.default.join(this.libraryCheckerPath, '**', name, 'checker'))).glob();
+                    if (checker.length === 0) {
+                        delete targets[name];
+                    }
+                }
+                yield fs_1.default.promises.writeFile(this.getCacheDataPath(), json_stable_stringify_1.default(targets));
+                if (this.lastCacheHash === (yield this.getCacheHash())) {
+                    core.info('Cache is not updated.');
+                    return;
+                }
+                const cacheId = yield cache.saveCache(this.getCachePath(), this.getCacheKey());
+                core.info(`Cache problems. id = ${cacheId}`);
+            }
+            catch (e) {
+                core.warning(e);
+            }
+        });
+    }
     /**
      * setup Library Checker
      */
@@ -223,14 +280,7 @@ class LibraryChecker {
         return __awaiter(this, void 0, void 0, function* () {
             yield core.group('setup Library Checker', () => __awaiter(this, void 0, void 0, function* () {
                 if (this.options.useCache) {
-                    const cacheKey = yield cache.restoreCache(this.getCachePath(), this.getCacheKey(), this.restoreCacheKey());
-                    if (cacheKey === undefined) {
-                        core.info(`Cache is not found`);
-                    }
-                    else {
-                        core.info(`Restore problems from cache = ${cacheKey}`);
-                        this.lastCacheHash = yield this.getCacheHash();
-                    }
+                    this.restoreCache();
                 }
                 yield exec_1.exec('pip3', ['install', '--user', '-r', 'requirements.txt'], this.execOpts);
                 if (process.platform !== 'win32' && process.platform !== 'darwin') {
@@ -268,32 +318,18 @@ class LibraryChecker {
             }
         });
     }
-    checkCached(problemNames) {
+    generateCore(targetProblemNames, skipFunc) {
         return __awaiter(this, void 0, void 0, function* () {
-            const current = yield this.problems();
-            const cached = yield this.cachedProblems();
-            const targets = {};
-            const addeds = [];
-            const notFounds = [];
-            for (const name of problemNames) {
-                const version = current[name];
-                if (version) {
-                    targets[name] = version;
-                    if (version !== cached[name]) {
-                        addeds.push(name);
-                    }
-                }
-                else {
-                    notFounds.push(name);
-                }
-            }
-            return { targets, addeds, notFounds };
+            yield Promise.all(targetProblemNames.map((n) => __awaiter(this, void 0, void 0, function* () {
+                if (!skipFunc(n))
+                    yield exec_1.exec('python3', ['generate.py', '-p', n], this.execOpts);
+            })));
         });
     }
     /**
      * generate problems
      */
-    generate(problemNames) {
+    generate(problemNames, skipFunc) {
         return __awaiter(this, void 0, void 0, function* () {
             const { targets, addeds, notFounds } = yield this.checkCached(problemNames);
             if (notFounds.length > 0) {
@@ -310,22 +346,15 @@ class LibraryChecker {
                     core.debug('cached target is empty');
                 }
                 yield Promise.all(cached.map((n) => __awaiter(this, void 0, void 0, function* () { return yield this.updateTimestampOfCachedFile(n); })));
-                yield exec_1.exec('python3', ['generate.py', '-p', ...targetNames], this.execOpts);
-                if (this.options.useCache) {
-                    try {
-                        yield fs_1.default.promises.writeFile(this.getCacheDataPath(), json_stable_stringify_1.default(targets));
-                        if (this.lastCacheHash === (yield this.getCacheHash())) {
-                            core.info('Cache is not updated.');
-                            return;
-                        }
-                        const cacheId = yield cache.saveCache(this.getCachePath(), this.getCacheKey());
-                        core.info(`Cache problems. id = ${cacheId}`);
-                    }
-                    catch (e) {
-                        core.warning(e);
-                    }
-                }
+                yield this.generateCore(targetNames, skipFunc);
             }));
+        });
+    }
+    dispose() {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (this.options.useCache) {
+                this.updateCache();
+            }
         });
     }
 }
@@ -456,7 +485,8 @@ function run() {
             const allProblems = yield libraryChecker.problems();
             yield printProblems(allProblems);
             const listProblems = (_a = (yield getListProblems(listProblemsCommand))) !== null && _a !== void 0 ? _a : Object.keys(allProblems);
-            yield libraryChecker.generate(listProblems);
+            yield libraryChecker.generate(listProblems, () => false);
+            yield libraryChecker.dispose();
         }
         catch (error) {
             core.setFailed(error.message);

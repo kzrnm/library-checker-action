@@ -115,7 +115,9 @@ async function run(): Promise<void> {
 
     const listProblems =
       (await getListProblems(listProblemsCommand)) ?? Object.keys(allProblems)
-    await libraryChecker.generate(listProblems)
+    await libraryChecker.generate(listProblems, () => false)
+
+    await libraryChecker.dispose()
   } catch (error) {
     core.setFailed(error.message)
   }

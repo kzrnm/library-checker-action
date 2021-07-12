@@ -28,7 +28,9 @@ describe('generate', () => {
         value: 'cache-hash'
       })
 
-      const execMock = jest.spyOn(exec, 'exec').mockResolvedValueOnce(0)
+      const execMock = jest
+        .spyOn(libraryChecker, 'generateCore')
+        .mockResolvedValueOnce()
       const mockedLogger = getMockedLogger()
       jest.spyOn(libraryChecker, 'cachedProblems').mockResolvedValue({
         aplusb: 'version',
@@ -36,17 +38,16 @@ describe('generate', () => {
         many_aplusb: 'version'
       })
 
-      await libraryChecker.generate(['aplusb', 'unionfind', 'many_aplusb'])
-      expect(execMock).toBeCalledTimes(1)
-      expect(execMock).toBeCalledWith(
-        'python3',
-        ['generate.py', '-p', 'aplusb', 'unionfind', 'many_aplusb'],
-        {cwd: __dirname}
+      await libraryChecker.generate(
+        ['aplusb', 'unionfind', 'many_aplusb'],
+        () => false
       )
+      expect(execMock.mock.calls).toEqual([
+        [['aplusb', 'unionfind', 'many_aplusb'], expect.any(Function)]
+      ])
       expect(mockedLogger.mock.calls).toEqual([
         ['startGroup', 'generate problems'],
         ['debug', 'cached: aplusb, unionfind, many_aplusb'],
-        ['info', 'Cache is not updated.'],
         ['endGroup', '']
       ])
     })
@@ -54,49 +55,53 @@ describe('generate', () => {
 
   describe('updated cache', () => {
     test('hit no cache', async () => {
-      const execMock = jest.spyOn(exec, 'exec').mockResolvedValueOnce(0)
+      const execMock = jest
+        .spyOn(libraryChecker, 'generateCore')
+        .mockResolvedValueOnce()
       const mockedLogger = getMockedLogger()
       jest.spyOn(libraryChecker, 'cachedProblems').mockResolvedValue({})
 
-      await libraryChecker.generate(['aplusb', 'unionfind', 'many_aplusb'])
-      expect(execMock).toBeCalledTimes(1)
-      expect(execMock).toBeCalledWith(
-        'python3',
-        ['generate.py', '-p', 'aplusb', 'unionfind', 'many_aplusb'],
-        {cwd: __dirname}
+      await libraryChecker.generate(
+        ['aplusb', 'unionfind', 'many_aplusb'],
+        () => false
       )
+      expect(execMock.mock.calls).toEqual([
+        [['aplusb', 'unionfind', 'many_aplusb'], expect.any(Function)]
+      ])
       expect(mockedLogger.mock.calls).toEqual([
         ['startGroup', 'generate problems'],
         ['debug', 'cached target is empty'],
-        ['info', 'Cache problems. id = 0'],
         ['endGroup', '']
       ])
     })
 
     test('hit some cache', async () => {
-      const execMock = jest.spyOn(exec, 'exec').mockResolvedValueOnce(0)
+      const execMock = jest
+        .spyOn(libraryChecker, 'generateCore')
+        .mockResolvedValueOnce()
       const mockedLogger = getMockedLogger()
       jest.spyOn(libraryChecker, 'cachedProblems').mockResolvedValue({
         aplusb: 'version',
         many_aplusb: 'version'
       })
-      await libraryChecker.generate(['aplusb', 'unionfind', 'many_aplusb'])
-      expect(execMock).toBeCalledTimes(1)
-      expect(execMock).toBeCalledWith(
-        'python3',
-        ['generate.py', '-p', 'aplusb', 'unionfind', 'many_aplusb'],
-        {cwd: __dirname}
+      await libraryChecker.generate(
+        ['aplusb', 'unionfind', 'many_aplusb'],
+        () => false
       )
+      expect(execMock.mock.calls).toEqual([
+        [['aplusb', 'unionfind', 'many_aplusb'], expect.any(Function)]
+      ])
       expect(mockedLogger.mock.calls).toEqual([
         ['startGroup', 'generate problems'],
         ['debug', 'cached: aplusb, many_aplusb'],
-        ['info', 'Cache problems. id = 0'],
         ['endGroup', '']
       ])
     })
 
     test('hit all cache', async () => {
-      const execMock = jest.spyOn(exec, 'exec').mockResolvedValueOnce(0)
+      const execMock = jest
+        .spyOn(libraryChecker, 'generateCore')
+        .mockResolvedValueOnce()
       const mockedLogger = getMockedLogger()
       jest.spyOn(libraryChecker, 'cachedProblems').mockResolvedValue({
         aplusb: 'version',
@@ -104,23 +109,24 @@ describe('generate', () => {
         many_aplusb: 'version'
       })
 
-      await libraryChecker.generate(['aplusb', 'unionfind', 'many_aplusb'])
-      expect(execMock).toBeCalledTimes(1)
-      expect(execMock).toBeCalledWith(
-        'python3',
-        ['generate.py', '-p', 'aplusb', 'unionfind', 'many_aplusb'],
-        {cwd: __dirname}
+      await libraryChecker.generate(
+        ['aplusb', 'unionfind', 'many_aplusb'],
+        () => false
       )
+      expect(execMock.mock.calls).toEqual([
+        [['aplusb', 'unionfind', 'many_aplusb'], expect.any(Function)]
+      ])
       expect(mockedLogger.mock.calls).toEqual([
         ['startGroup', 'generate problems'],
         ['debug', 'cached: aplusb, unionfind, many_aplusb'],
-        ['info', 'Cache problems. id = 0'],
         ['endGroup', '']
       ])
     })
 
     test('hit all cache with not found', async () => {
-      const execMock = jest.spyOn(exec, 'exec').mockResolvedValueOnce(0)
+      const execMock = jest
+        .spyOn(libraryChecker, 'generateCore')
+        .mockResolvedValueOnce()
       const mockedLogger = getMockedLogger()
       jest.spyOn(libraryChecker, 'cachedProblems').mockResolvedValue({
         aplusb: 'version',
@@ -128,24 +134,14 @@ describe('generate', () => {
         many_aplusb: 'version'
       })
 
-      await libraryChecker.generate([
-        'aplusb',
-        'unionfind',
-        'many_aplusb',
-        'notfound',
-        'anything'
-      ])
-      expect(execMock).toBeCalledTimes(1)
-      expect(execMock).toBeCalledWith(
-        'python3',
-        ['generate.py', '-p', 'aplusb', 'unionfind', 'many_aplusb'],
-        {cwd: __dirname}
+      await libraryChecker.generate(
+        ['aplusb', 'unionfind', 'many_aplusb', 'notfound', 'anything'],
+        () => false
       )
       expect(mockedLogger.mock.calls).toEqual([
         ['warning', 'Problems are not found: notfound, anything'],
         ['startGroup', 'generate problems'],
         ['debug', 'cached: aplusb, unionfind, many_aplusb'],
-        ['info', 'Cache problems. id = 0'],
         ['endGroup', '']
       ])
     })
