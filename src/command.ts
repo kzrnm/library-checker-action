@@ -13,7 +13,12 @@ export class CommandRunner {
     this.hasSpecifiers = command.includes('%s')
   }
   // eslint-disable-next-line @typescript-eslint/promise-function-async
-  runCommand(name: string, options: ExecOptions): PCancelable<number> {
+  runCommand(
+    name: string,
+    input: stream.Readable | null,
+    outStream: stream.Writable | null,
+    options: ExecOptions
+  ): PCancelable<number> {
     const makeCommand = (): [string, string[]] => {
       if (this.hasSpecifiers) return [this.command.replace('%s', name), []]
       else return [this.command, [name]]
@@ -37,10 +42,7 @@ export class CommandRunner {
       onCancel(() => {
         cp.kill('SIGKILL')
       })
-
-      cp.stdout.on('data', (data: Buffer) => {
-        optionsNonNull.outStream.write(data)
-      })
+      if (outStream) cp.stdout.pipe(outStream)
 
       cp.on('error', (err: Error) => {
         reject(err)
@@ -52,15 +54,15 @@ export class CommandRunner {
         resolve(code)
       })
 
-      if (options.input) {
-        cp.stdin.end(options.input)
+      if (input) {
+        input.pipe(cp.stdin)
       }
     })
     /* eslint-enable @typescript-eslint/no-explicit-any */
   }
 
   async skipTest(name: string): Promise<boolean> {
-    const running = this.runCommand(name, {
+    const running = this.runCommand(name, null, null, {
       silent: true,
       delay: 0,
       ignoreReturnCode: true
@@ -73,13 +75,11 @@ export class CommandRunner {
   // eslint-disable-next-line @typescript-eslint/promise-function-async
   runProblem(
     name: string,
-    input: Buffer,
+    input: stream.Readable,
     outStream: stream.Writable
   ): PCancelable<number> {
-    return this.runCommand(name, {
-      input,
+    return this.runCommand(name, input, outStream, {
       silent: true,
-      outStream,
       delay: 0,
       ignoreReturnCode: true
     })

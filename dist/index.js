@@ -49,7 +49,7 @@ class CommandRunner {
         this.hasSpecifiers = command.includes('%s');
     }
     // eslint-disable-next-line @typescript-eslint/promise-function-async
-    runCommand(name, options) {
+    runCommand(name, input, outStream, options) {
         const makeCommand = () => {
             if (this.hasSpecifiers)
                 return [this.command.replace('%s', name), []];
@@ -69,9 +69,8 @@ class CommandRunner {
             onCancel(() => {
                 cp.kill('SIGKILL');
             });
-            cp.stdout.on('data', (data) => {
-                optionsNonNull.outStream.write(data);
-            });
+            if (outStream)
+                cp.stdout.pipe(outStream);
             cp.on('error', (err) => {
                 reject(err);
             });
@@ -81,15 +80,15 @@ class CommandRunner {
             cp.on('close', (code) => {
                 resolve(code);
             });
-            if (options.input) {
-                cp.stdin.end(options.input);
+            if (input) {
+                input.pipe(cp.stdin);
             }
         });
         /* eslint-enable @typescript-eslint/no-explicit-any */
     }
     skipTest(name) {
         return __awaiter(this, void 0, void 0, function* () {
-            const running = this.runCommand(name, {
+            const running = this.runCommand(name, null, null, {
                 silent: true,
                 delay: 0,
                 ignoreReturnCode: true
@@ -101,10 +100,8 @@ class CommandRunner {
     }
     // eslint-disable-next-line @typescript-eslint/promise-function-async
     runProblem(name, input, outStream) {
-        return this.runCommand(name, {
-            input,
+        return this.runCommand(name, input, outStream, {
             silent: true,
-            outStream,
             delay: 0,
             ignoreReturnCode: true
         });
@@ -458,8 +455,9 @@ class LibraryChecker {
                     const inFile = path_1.default.join(inDir, taskName);
                     const outFile = path_1.default.join(outDir, `${fileNameWithoutExtension}.out`);
                     const gotFile = path_1.default.join(gotDir, `${fileNameWithoutExtension}.got`);
+                    const src = fs_1.default.createReadStream(inFile, { autoClose: true });
                     const dest = fs_1.default.createWriteStream(gotFile, { autoClose: true });
-                    const runPromise = runner(problemName, yield fs_1.default.promises.readFile(inFile), dest);
+                    const runPromise = runner(problemName, src, dest);
                     const ret = yield Promise.race([
                         runPromise,
                         delay_1.default(timeoutSec * 1000 * 4, { value: -1 })

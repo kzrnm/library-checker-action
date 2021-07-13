@@ -249,7 +249,7 @@ export class LibraryChecker {
     problemName: string,
     runner: (
       name: string,
-      input: Buffer,
+      input: stream.Readable,
       outStream: stream.Writable
     ) => PCancelable<number>
   ): Promise<void> {
@@ -278,13 +278,10 @@ export class LibraryChecker {
         const outFile = path.join(outDir, `${fileNameWithoutExtension}.out`)
         const gotFile = path.join(gotDir, `${fileNameWithoutExtension}.got`)
 
+        const src = fs.createReadStream(inFile, {autoClose: true})
         const dest = fs.createWriteStream(gotFile, {autoClose: true})
 
-        const runPromise = runner(
-          problemName,
-          await fs.promises.readFile(inFile),
-          dest
-        )
+        const runPromise = runner(problemName, src, dest)
         const ret = await Promise.race([
           runPromise,
           delay(timeoutSec * 1000 * 4, {value: -1})
