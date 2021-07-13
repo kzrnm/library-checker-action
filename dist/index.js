@@ -238,7 +238,7 @@ class LibraryChecker {
     }
     getCacheHash() {
         return __awaiter(this, void 0, void 0, function* () {
-            return glob.hashFiles(this.getCachePath().join('\n'));
+            return yield glob.hashFiles(this.getCachePath().join('\n'));
         });
     }
     updateTimestampOfCachedFile(name) {

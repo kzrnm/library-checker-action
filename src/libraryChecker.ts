@@ -37,7 +37,7 @@ export class LibraryChecker {
   private lastCacheHash?: string
 
   async getCacheHash(): Promise<string> {
-    return glob.hashFiles(this.getCachePath().join('\n'))
+    return await glob.hashFiles(this.getCachePath().join('\n'))
   }
 
   async updateTimestampOfCachedFile(name: string): Promise<void> {
