@@ -26,9 +26,9 @@ export function parseInput(
   ) => string
 ): InputObject {
   const command = getInputFunc('command', {required: true})
+  const listProblemsCommand = getInputFunc('list-problems', {required: true})
   const repositoryName = getInputFunc('repository-name')
   const commit = getInputFunc('commit')
-  const listProblemsCommand = getInputFunc('list-problems')
   const cacheTestData = parseBoolean(getInputFunc('cache-test-data'))
   return {
     command,
@@ -143,10 +143,11 @@ async function run(): Promise<void> {
     await printProblems(allProblems)
 
     const commandRunner = new CommandRunner(targetCommand)
+    const problems = await getProblems(listProblemsCommand)
 
-    const problems =
-      (await getProblems(listProblemsCommand)) ??
-      (await problemsWithSkip(commandRunner, Object.keys(allProblems)))
+    if (!problems) throw new Error("problems don't exist.")
+
+    core.info(`target problems: ${problems}`)
 
     await libraryChecker.updateCacheOf(problems)
 

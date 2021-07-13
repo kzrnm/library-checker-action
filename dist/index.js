@@ -427,7 +427,9 @@ class LibraryChecker {
                 else {
                     core.info('cached target is empty');
                 }
-                yield Promise.all(exists.map((n) => __awaiter(this, void 0, void 0, function* () { return yield this.updateTimestampOfCachedFile(n); })));
+                for (const n of exists) {
+                    yield this.updateTimestampOfCachedFile(n);
+                }
             }));
         });
     }
@@ -538,9 +540,9 @@ function parseBoolean(str) {
 }
 function parseInput(getInputFunc) {
     const command = getInputFunc('command', { required: true });
+    const listProblemsCommand = getInputFunc('list-problems', { required: true });
     const repositoryName = getInputFunc('repository-name');
     const commit = getInputFunc('commit');
-    const listProblemsCommand = getInputFunc('list-problems');
     const cacheTestData = parseBoolean(getInputFunc('cache-test-data'));
     return {
         command,
@@ -621,7 +623,6 @@ function problemsWithSkip(commandRunner, allProblemNames) {
 }
 exports.problemsWithSkip = problemsWithSkip;
 function run() {
-    var _a;
     return __awaiter(this, void 0, void 0, function* () {
         try {
             core.setCommandEcho(true);
@@ -631,7 +632,10 @@ function run() {
             const allProblems = yield libraryChecker.problems();
             yield printProblems(allProblems);
             const commandRunner = new command_1.CommandRunner(targetCommand);
-            const problems = (_a = (yield getProblems(listProblemsCommand))) !== null && _a !== void 0 ? _a : (yield problemsWithSkip(commandRunner, Object.keys(allProblems)));
+            const problems = yield getProblems(listProblemsCommand);
+            if (!problems)
+                throw new Error("problems don't exist.");
+            core.info(`target problems: ${problems}`);
             yield libraryChecker.updateCacheOf(problems);
             for (const p of problems) {
                 // eslint-disable-next-line @typescript-eslint/promise-function-async

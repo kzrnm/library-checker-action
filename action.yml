@@ -5,6 +5,9 @@ inputs:
   command:
     required: true
     description: "Command for library checker\nIf you want skip a problem, exit before reading stdin."
+  list-problems:
+    required: true
+    description: 'Command that lists the problems to check'
   repository-name:
     required: false
     description: 'library checcker repository'
@@ -12,9 +15,6 @@ inputs:
   commit:
     required: false
     description: 'revision/branch/tag'
-  list-problems:
-    required: false
-    description: 'Command that lists the problems to check'
   cache-test-data:
     required: false
     default: 'false'

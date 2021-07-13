@@ -32,7 +32,13 @@ If your command contains `%s`, the action replace `%s` with a problem name If no
 # Run others....
 ```
 
-If you want skip a problem, exit before reading stdin.
+### list-problems
+
+**Required**
+
+Command that lists the problems to check.
+
+The output must be whitespace delimited.
 
 ### repository-name
 
@@ -49,16 +55,6 @@ default: `yosupo06/library-checker-problems`
 revision/branch/tag
 
 default: HEAD
-
-### list-problems
-
-**Option**
-
-Command that lists the problems to check.
-
-The output must be whitespace delimited.
-
-If the output is empty, this action checks all problems.
 
 ### cache-test-data
 

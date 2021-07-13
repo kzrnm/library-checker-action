@@ -40,3 +40,4 @@ jobs:
         timeout-minutes: 5
         with:
           command: 'python3 ${{ github.workspace }}/Samples/Python/main.py'
+          list-problems: 'echo aplusb many_aplusb'

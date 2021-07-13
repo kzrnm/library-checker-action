@@ -237,9 +237,9 @@ export class LibraryChecker {
       } else {
         core.info('cached target is empty')
       }
-      await Promise.all(
-        exists.map(async n => await this.updateTimestampOfCachedFile(n))
-      )
+      for (const n of exists) {
+        await this.updateTimestampOfCachedFile(n)
+      }
     })
   }
 
