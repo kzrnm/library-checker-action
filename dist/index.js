@@ -386,7 +386,7 @@ class LibraryChecker {
             const dir = yield this.getProblemDirectory(problemName);
             const infoFile = path_1.default.join(dir, 'info.toml');
             const info = toml.parse(yield fs_1.default.promises.readFile(infoFile, { encoding: 'utf-8' }));
-            const timeoutSec = 5 * info['timelimit'];
+            const timeoutSec = 1000 * info['timelimit'];
             core.group(`generate ${problemName}`, () => __awaiter(this, void 0, void 0, function* () {
                 yield exec_1.exec('python3', ['./generate.py', infoFile], this.execOpts);
             }));
