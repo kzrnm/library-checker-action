@@ -241,7 +241,7 @@ class LibraryChecker {
     restoreCacheKey() {
         const keyArray = this.getCacheKeyArray();
         const result = [];
-        for (let i = keyArray.length - 1; i > 0; i--) {
+        for (let i = keyArray.length - 1; i > 1; i--) {
             result.push(`${keyArray.slice(0, i).join('-')}-`);
         }
         return result;
@@ -589,7 +589,7 @@ function run() {
             const problems = (_a = (yield getProblems(listProblemsCommand))) !== null && _a !== void 0 ? _a : (yield problemsWithSkip(commandRunner, Object.keys(allProblems)));
             yield libraryChecker.updateCacheOf(problems);
             for (const p of problems) {
-                yield libraryChecker.runProblem(p, (n, input, out) => __awaiter(this, void 0, void 0, function* () { return commandRunner.runProblem(n, input, out); }));
+                yield libraryChecker.runProblem(p, (n, input, out) => commandRunner.runProblem(n, input, out));
             }
             yield libraryChecker.dispose();
         }

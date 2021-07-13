@@ -84,7 +84,7 @@ export class LibraryChecker {
   restoreCacheKey(): string[] {
     const keyArray = this.getCacheKeyArray()
     const result = []
-    for (let i = keyArray.length - 1; i > 0; i--) {
+    for (let i = keyArray.length - 1; i > 1; i--) {
       result.push(`${keyArray.slice(0, i).join('-')}-`)
     }
     return result
