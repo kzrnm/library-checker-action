@@ -43,7 +43,7 @@ class CommandRunner {
         return __awaiter(this, void 0, void 0, function* () {
             const ret = yield Promise.race([
                 delay_1.default(500),
-                this.runCommand(name, { silent: true, ignoreReturnCode: true })
+                this.runCommand(name, { silent: true, delay: 0, ignoreReturnCode: true })
             ]);
             return ret >= 0;
         });
@@ -54,6 +54,7 @@ class CommandRunner {
                 input,
                 outStream,
                 silent: true,
+                delay: 0,
                 ignoreReturnCode: true
             });
         });
@@ -568,7 +569,7 @@ function getProblems(listProblemsCommand) {
 exports.getProblems = getProblems;
 function problemsWithSkip(commandRunner, allProblemNames) {
     return __awaiter(this, void 0, void 0, function* () {
-        const skips = yield Promise.all(allProblemNames.map(v => commandRunner.skipTest(v)));
+        const skips = yield Promise.all(allProblemNames.map((v) => __awaiter(this, void 0, void 0, function* () { return commandRunner.skipTest(v); })));
         const ret = [];
         for (let i = 0; i < allProblemNames.length; i++) {
             if (!skips[i])
@@ -592,7 +593,7 @@ function run() {
             const problems = (_a = (yield getProblems(listProblemsCommand))) !== null && _a !== void 0 ? _a : (yield problemsWithSkip(commandRunner, Object.keys(allProblems)));
             yield libraryChecker.updateCacheOf(problems);
             for (const p of problems) {
-                yield libraryChecker.runProblem(p, (n, input, out) => commandRunner.runProblem(n, input, out));
+                yield libraryChecker.runProblem(p, (n, input, out) => __awaiter(this, void 0, void 0, function* () { return commandRunner.runProblem(n, input, out); }));
             }
             yield libraryChecker.dispose();
         }

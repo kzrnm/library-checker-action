@@ -113,7 +113,7 @@ export async function problemsWithSkip(
   allProblemNames: string[]
 ): Promise<string[]> {
   const skips = await Promise.all(
-    allProblemNames.map(v => commandRunner.skipTest(v))
+    allProblemNames.map(async v => commandRunner.skipTest(v))
   )
   const ret: string[] = []
   for (let i = 0; i < allProblemNames.length; i++) {
@@ -151,7 +151,7 @@ async function run(): Promise<void> {
     await libraryChecker.updateCacheOf(problems)
 
     for (const p of problems) {
-      await libraryChecker.runProblem(p, (n, input, out) =>
+      await libraryChecker.runProblem(p, async (n, input, out) =>
         commandRunner.runProblem(n, input, out)
       )
     }

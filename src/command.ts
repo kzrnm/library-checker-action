@@ -22,7 +22,7 @@ export class CommandRunner {
   async skipTest(name: string): Promise<boolean> {
     const ret = await Promise.race([
       delay(500),
-      this.runCommand(name, {silent: true, ignoreReturnCode: true})
+      this.runCommand(name, {silent: true, delay: 0, ignoreReturnCode: true})
     ])
     return ret >= 0
   }
@@ -36,6 +36,7 @@ export class CommandRunner {
       input,
       outStream,
       silent: true,
+      delay: 0,
       ignoreReturnCode: true
     })
   }

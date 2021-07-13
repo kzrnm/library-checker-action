@@ -26,6 +26,7 @@ describe('skipTest call exec', () => {
         ['test-problem-name'],
         {
           ignoreReturnCode: true,
+          delay: 0,
           silent: true
         }
       ]
@@ -42,6 +43,7 @@ describe('skipTest call exec', () => {
         [],
         {
           ignoreReturnCode: true,
+          delay: 0,
           silent: true
         }
       ]
