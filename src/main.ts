@@ -151,7 +151,9 @@ async function run(): Promise<void> {
     await libraryChecker.updateCacheOf(problems)
 
     for (const p of problems) {
-      await libraryChecker.runProblem(p, commandRunner.runProblem)
+      await libraryChecker.runProblem(p, async (n, input, out) =>
+        commandRunner.runProblem(n, input, out)
+      )
     }
     await libraryChecker.dispose()
   } catch (error) {
