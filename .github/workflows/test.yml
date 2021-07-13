@@ -18,16 +18,25 @@ jobs:
           cache: 'npm'
       - run: npm install
       - run: npm run all
-  python-test:
-    strategy:
-      matrix:
-        os: [windows-latest, macos-latest, ubuntu-latest]
-    runs-on: ${{ matrix.os }}
+  # python-test:
+  #   strategy:
+  #     matrix:
+  #       os: [windows-latest, macos-latest, ubuntu-latest]
+  #   runs-on: ${{ matrix.os }}
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #     - uses: ./
+  #       timeout-minutes: 5
+  #       with:
+  #         command: 'python3 ${{ github.workspace }}/Samples/Python/main.py'
+  #         list-problems: 'echo aplusb many_aplusb'
+  #         cache-test-data: true
+
+  python-test2:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - uses: ./
         timeout-minutes: 5
         with:
           command: 'python3 ${{ github.workspace }}/Samples/Python/main.py'
-          list-problems: 'echo aplusb many_aplusb'
-          cache-test-data: true
