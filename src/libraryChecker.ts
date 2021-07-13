@@ -258,8 +258,9 @@ export class LibraryChecker {
       await fs.promises.readFile(infoFile, {encoding: 'utf-8'})
     )
     const timeoutSec = 5 * (info['timelimit'] as number)
-
-    await exec('python3', ['./generate.py', infoFile], this.execOpts)
+    core.group(`generate ${problemName}`, async () => {
+      await exec('python3', ['./generate.py', infoFile], this.execOpts)
+    })
 
     const inDir = path.join(dir, 'in')
     const outDir = path.join(dir, 'out')
