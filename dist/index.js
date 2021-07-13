@@ -457,11 +457,13 @@ class LibraryChecker {
                     const dest = fs_1.default.createWriteStream(gotFile, { autoClose: true });
                     const ret = yield runner(problemName, src, dest);
                     if (ret !== 0) {
-                        throw new Error(`${problemName}-${taskName}: Your command exit with code ${ret}`);
+                        core.setFailed(`${problemName}-${taskName}: Your command exit with code ${ret}`);
+                        return;
                     }
                     const checkRet = yield exec_1.exec(checker, [inFile, outFile, gotFile], Object.assign({ silent: true }, this.execOpts));
                     if (checkRet !== 0) {
-                        throw new Error(`${problemName}-${taskName}: Checker exit with code ${ret}`);
+                        core.setFailed(`${problemName}-${taskName}: Checker exit with code ${ret}`);
+                        return;
                     }
                     core.info(`${problemName}-${taskName}: passed`);
                 }

@@ -277,18 +277,20 @@ export class LibraryChecker {
 
         const ret = await runner(problemName, src, dest)
         if (ret !== 0) {
-          throw new Error(
+          core.setFailed(
             `${problemName}-${taskName}: Your command exit with code ${ret}`
           )
+          return
         }
         const checkRet = await exec(checker, [inFile, outFile, gotFile], {
           silent: true,
           ...this.execOpts
         })
         if (checkRet !== 0) {
-          throw new Error(
+          core.setFailed(
             `${problemName}-${taskName}: Checker exit with code ${ret}`
           )
+          return
         }
         core.info(`${problemName}-${taskName}: passed`)
       } catch (e) {
