@@ -287,7 +287,7 @@ export class LibraryChecker {
         )
         const ret = await Promise.race([
           runPromise,
-          delay(timeoutSec * 1000, {value: -1})
+          delay(timeoutSec * 1000 * 4, {value: -1})
         ])
         if (ret !== 0) {
           runPromise.cancel()

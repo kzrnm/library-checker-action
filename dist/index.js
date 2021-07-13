@@ -462,7 +462,7 @@ class LibraryChecker {
                     const runPromise = runner(problemName, yield fs_1.default.promises.readFile(inFile), dest);
                     const ret = yield Promise.race([
                         runPromise,
-                        delay_1.default(timeoutSec * 1000, { value: -1 })
+                        delay_1.default(timeoutSec * 1000 * 4, { value: -1 })
                     ]);
                     if (ret !== 0) {
                         runPromise.cancel();
