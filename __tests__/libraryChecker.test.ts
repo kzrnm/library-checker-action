@@ -38,7 +38,7 @@ describe('updateCache', () => {
       await libraryChecker.updateCacheOf(['aplusb', 'unionfind', 'many_aplusb'])
       expect(mockedLogger.mock.calls).toEqual([
         ['startGroup', 'update caches'],
-        ['debug', 'cached: aplusb, unionfind, many_aplusb'],
+        ['info', 'cached: aplusb, unionfind, many_aplusb'],
         ['endGroup', '']
       ])
     })
@@ -52,7 +52,7 @@ describe('updateCache', () => {
       await libraryChecker.updateCacheOf(['aplusb', 'unionfind', 'many_aplusb'])
       expect(mockedLogger.mock.calls).toEqual([
         ['startGroup', 'update caches'],
-        ['debug', 'cached target is empty'],
+        ['info', 'cached target is empty'],
         ['endGroup', '']
       ])
     })
@@ -66,7 +66,7 @@ describe('updateCache', () => {
       await libraryChecker.updateCacheOf(['aplusb', 'unionfind', 'many_aplusb'])
       expect(mockedLogger.mock.calls).toEqual([
         ['startGroup', 'update caches'],
-        ['debug', 'cached: aplusb, many_aplusb'],
+        ['info', 'cached: aplusb, many_aplusb'],
         ['endGroup', '']
       ])
     })
@@ -82,7 +82,7 @@ describe('updateCache', () => {
       await libraryChecker.updateCacheOf(['aplusb', 'unionfind', 'many_aplusb'])
       expect(mockedLogger.mock.calls).toEqual([
         ['startGroup', 'update caches'],
-        ['debug', 'cached: aplusb, unionfind, many_aplusb'],
+        ['info', 'cached: aplusb, unionfind, many_aplusb'],
         ['endGroup', '']
       ])
     })
@@ -105,7 +105,7 @@ describe('updateCache', () => {
       expect(mockedLogger.mock.calls).toEqual([
         ['startGroup', 'update caches'],
         ['warning', 'Problems are not found: notfound, anything'],
-        ['debug', 'cached: aplusb, unionfind, many_aplusb'],
+        ['info', 'cached: aplusb, unionfind, many_aplusb'],
         ['endGroup', '']
       ])
     })

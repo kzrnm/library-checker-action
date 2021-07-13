@@ -372,10 +372,10 @@ class LibraryChecker {
                     core.warning(`Problems are not found: ${notFounds.join(', ')}`);
                 }
                 if (exists.length > 0) {
-                    core.debug(`cached: ${exists.join(', ')}`);
+                    core.info(`cached: ${exists.join(', ')}`);
                 }
                 else {
-                    core.debug('cached target is empty');
+                    core.info('cached target is empty');
                 }
                 yield Promise.all(exists.map((n) => __awaiter(this, void 0, void 0, function* () { return yield this.updateTimestampOfCachedFile(n); })));
             }));

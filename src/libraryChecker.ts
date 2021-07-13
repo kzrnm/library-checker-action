@@ -233,9 +233,9 @@ export class LibraryChecker {
       }
 
       if (exists.length > 0) {
-        core.debug(`cached: ${exists.join(', ')}`)
+        core.info(`cached: ${exists.join(', ')}`)
       } else {
-        core.debug('cached target is empty')
+        core.info('cached target is empty')
       }
       await Promise.all(
         exists.map(async n => await this.updateTimestampOfCachedFile(n))
