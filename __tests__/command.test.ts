@@ -26,6 +26,7 @@ describe('skipTest call exec', () => {
         ['test-problem-name'],
         {
           ignoreReturnCode: true,
+          outStream: expect.anything(),
           delay: 0,
           silent: true
         }
@@ -43,6 +44,7 @@ describe('skipTest call exec', () => {
         [],
         {
           ignoreReturnCode: true,
+          outStream: expect.anything(),
           delay: 0,
           silent: true
         }

@@ -20,10 +20,17 @@ export class CommandRunner {
   }
 
   async skipTest(name: string): Promise<boolean> {
+    const buf = new stream.Transform()
     const ret = await Promise.race([
       delay(500),
-      this.runCommand(name, {silent: true, delay: 0, ignoreReturnCode: true})
+      this.runCommand(name, {
+        outStream: buf,
+        silent: true,
+        delay: 0,
+        ignoreReturnCode: true
+      })
     ])
+    buf.destroy()
     return ret >= 0
   }
 
@@ -34,9 +41,12 @@ export class CommandRunner {
   ): Promise<number> {
     return await this.runCommand(name, {
       input,
-      outStream,
       silent: true,
+      outStream,
       delay: 0,
+      listeners: {
+        stdout: line => outStream.write(line, 'utf-8')
+      },
       ignoreReturnCode: true
     })
   }

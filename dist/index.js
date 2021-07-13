@@ -21,6 +21,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CommandRunner = void 0;
 const exec_1 = __nccwpck_require__(1514);
+const stream_1 = __importDefault(__nccwpck_require__(2413));
 const delay_1 = __importDefault(__nccwpck_require__(86));
 class CommandRunner {
     constructor(command) {
@@ -41,10 +42,17 @@ class CommandRunner {
     }
     skipTest(name) {
         return __awaiter(this, void 0, void 0, function* () {
+            const buf = new stream_1.default.Transform();
             const ret = yield Promise.race([
                 delay_1.default(500),
-                this.runCommand(name, { silent: true, delay: 0, ignoreReturnCode: true })
+                this.runCommand(name, {
+                    outStream: buf,
+                    silent: true,
+                    delay: 0,
+                    ignoreReturnCode: true
+                })
             ]);
+            buf.destroy();
             return ret >= 0;
         });
     }
@@ -52,9 +60,12 @@ class CommandRunner {
         return __awaiter(this, void 0, void 0, function* () {
             return yield this.runCommand(name, {
                 input,
-                outStream,
                 silent: true,
+                outStream,
                 delay: 0,
+                listeners: {
+                    stdout: line => outStream.write(line, 'utf-8')
+                },
                 ignoreReturnCode: true
             });
         });
@@ -410,8 +421,12 @@ class LibraryChecker {
                     const gotFile = path_1.default.join(gotDir, `${fileNameWithoutExtension}.got`);
                     const dest = fs_1.default.createWriteStream(gotFile, { autoClose: true });
                     const runPromise = runner(problemName, yield fs_1.default.promises.readFile(inFile), dest);
-                    const ret = yield Promise.race([runPromise, delay_1.default(timeoutSec * 1000)]);
+                    const ret = yield Promise.race([
+                        runPromise,
+                        delay_1.default(timeoutSec * 1000, { value: -1 })
+                    ]);
                     if (ret !== 0) {
+                        dest.close();
                         if (ret === -1)
                             throw new Error(`${problemName}-${taskName}: Your command is timeout.`);
                         throw new Error(`${problemName}-${taskName}: Your command exit with code ${ret}`);

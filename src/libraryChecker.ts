@@ -284,8 +284,12 @@ export class LibraryChecker {
           await fs.promises.readFile(inFile),
           dest
         )
-        const ret = await Promise.race([runPromise, delay(timeoutSec * 1000)])
+        const ret = await Promise.race([
+          runPromise,
+          delay(timeoutSec * 1000, {value: -1})
+        ])
         if (ret !== 0) {
+          dest.close()
           if (ret === -1)
             throw new Error(
               `${problemName}-${taskName}: Your command is timeout.`
