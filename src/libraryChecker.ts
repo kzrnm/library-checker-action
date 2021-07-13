@@ -8,6 +8,7 @@ import path from 'path'
 import {v1 as uuidv1} from 'uuid'
 import stringify from 'json-stable-stringify'
 import stream from 'stream'
+import delay from 'delay'
 
 export interface LibraryCheckerOptions {
   useCache?: boolean
@@ -283,10 +284,7 @@ export class LibraryChecker {
           await fs.promises.readFile(inFile),
           dest
         )
-        const timeout = new Promise<number>(resolve =>
-          setTimeout(() => resolve(-1), timeoutSec * 1000)
-        )
-        const ret = await Promise.race([runPromise, timeout])
+        const ret = await Promise.race([runPromise, delay(timeoutSec * 1000)])
         if (ret !== 0) {
           if (ret === -1)
             throw new Error(

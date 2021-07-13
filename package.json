@@ -36,6 +36,7 @@
     "@actions/exec": "^1.1.0",
     "@actions/glob": "^0.2.0",
     "@iarna/toml": "^2.2.5",
+    "delay": "^5.0.0",
     "git-clone": "^0.1.0",
     "json-stable-stringify": "^1.0.1",
     "uuid": "^8.3.2"

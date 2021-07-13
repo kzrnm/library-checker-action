@@ -15,9 +15,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CommandRunner = void 0;
 const exec_1 = __nccwpck_require__(1514);
+const delay_1 = __importDefault(__nccwpck_require__(86));
 class CommandRunner {
     constructor(command) {
         this.command = command;
@@ -37,9 +41,8 @@ class CommandRunner {
     }
     skipTest(name) {
         return __awaiter(this, void 0, void 0, function* () {
-            const timeout = new Promise(resolve => setTimeout(() => resolve(-1), 500));
             const ret = yield Promise.race([
-                timeout,
+                delay_1.default(500),
                 this.runCommand(name, { silent: true, ignoreReturnCode: true })
             ]);
             return ret >= 0;
@@ -178,6 +181,7 @@ const fs_1 = __importDefault(__nccwpck_require__(5747));
 const path_1 = __importDefault(__nccwpck_require__(5622));
 const uuid_1 = __nccwpck_require__(5840);
 const json_stable_stringify_1 = __importDefault(__nccwpck_require__(6645));
+const delay_1 = __importDefault(__nccwpck_require__(86));
 class LibraryChecker {
     constructor(libraryCheckerPath, commit, options) {
         this.libraryCheckerPath = libraryCheckerPath;
@@ -405,8 +409,7 @@ class LibraryChecker {
                     const gotFile = path_1.default.join(gotDir, `${fileNameWithoutExtension}.got`);
                     const dest = fs_1.default.createWriteStream(gotFile, { autoClose: true });
                     const runPromise = runner(problemName, yield fs_1.default.promises.readFile(inFile), dest);
-                    const timeout = new Promise(resolve => setTimeout(() => resolve(-1), timeoutSec * 1000));
-                    const ret = yield Promise.race([runPromise, timeout]);
+                    const ret = yield Promise.race([runPromise, delay_1.default(timeoutSec * 1000)]);
                     if (ret !== 0) {
                         if (ret === -1)
                             throw new Error(`${problemName}-${taskName}: Your command is timeout.`);
@@ -50591,6 +50594,86 @@ module.exports = function (xs, fn) {
 var isArray = Array.isArray || function (xs) {
     return Object.prototype.toString.call(xs) === '[object Array]';
 };
+
+
+/***/ }),
+
+/***/ 86:
+/***/ ((module) => {
+
+"use strict";
+
+
+// From https://github.com/sindresorhus/random-int/blob/c37741b56f76b9160b0b63dae4e9c64875128146/index.js#L13-L15
+const randomInteger = (minimum, maximum) => Math.floor((Math.random() * (maximum - minimum + 1)) + minimum);
+
+const createAbortError = () => {
+	const error = new Error('Delay aborted');
+	error.name = 'AbortError';
+	return error;
+};
+
+const createDelay = ({clearTimeout: defaultClear, setTimeout: set, willResolve}) => (ms, {value, signal} = {}) => {
+	if (signal && signal.aborted) {
+		return Promise.reject(createAbortError());
+	}
+
+	let timeoutId;
+	let settle;
+	let rejectFn;
+	const clear = defaultClear || clearTimeout;
+
+	const signalListener = () => {
+		clear(timeoutId);
+		rejectFn(createAbortError());
+	};
+
+	const cleanup = () => {
+		if (signal) {
+			signal.removeEventListener('abort', signalListener);
+		}
+	};
+
+	const delayPromise = new Promise((resolve, reject) => {
+		settle = () => {
+			cleanup();
+			if (willResolve) {
+				resolve(value);
+			} else {
+				reject(value);
+			}
+		};
+
+		rejectFn = reject;
+		timeoutId = (set || setTimeout)(settle, ms);
+	});
+
+	if (signal) {
+		signal.addEventListener('abort', signalListener, {once: true});
+	}
+
+	delayPromise.clear = () => {
+		clear(timeoutId);
+		timeoutId = null;
+		settle();
+	};
+
+	return delayPromise;
+};
+
+const createWithTimers = clearAndSet => {
+	const delay = createDelay({...clearAndSet, willResolve: true});
+	delay.reject = createDelay({...clearAndSet, willResolve: false});
+	delay.range = (minimum, maximum, options) => delay(randomInteger(minimum, maximum), options);
+	return delay;
+};
+
+const delay = createWithTimers();
+delay.createWithTimers = createWithTimers;
+
+module.exports = delay;
+// TODO: Remove this for the next major release
+module.exports.default = delay;
 
 
 /***/ }),

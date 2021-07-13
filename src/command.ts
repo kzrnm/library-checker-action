@@ -1,5 +1,6 @@
 import {exec, ExecOptions} from '@actions/exec'
 import stream from 'stream'
+import delay from 'delay'
 
 export class CommandRunner {
   private readonly command: string
@@ -19,11 +20,8 @@ export class CommandRunner {
   }
 
   async skipTest(name: string): Promise<boolean> {
-    const timeout = new Promise<number>(resolve =>
-      setTimeout(() => resolve(-1), 500)
-    )
     const ret = await Promise.race([
-      timeout,
+      delay(500),
       this.runCommand(name, {silent: true, ignoreReturnCode: true})
     ])
     return ret >= 0
