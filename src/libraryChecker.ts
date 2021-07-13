@@ -1,14 +1,12 @@
 import * as cache from '@actions/cache'
 import * as core from '@actions/core'
 import * as glob from '@actions/glob'
-import * as toml from '@iarna/toml'
 import {exec, getExecOutput, ExecOptions} from '@actions/exec'
 import fs from 'fs'
 import path from 'path'
 import {v1 as uuidv1} from 'uuid'
 import stringify from 'json-stable-stringify'
 import stream from 'stream'
-import delay from 'delay'
 import PCancelable from 'p-cancelable'
 
 export interface LibraryCheckerOptions {
@@ -256,10 +254,6 @@ export class LibraryChecker {
     const dir = await this.getProblemDirectory(problemName)
     const infoFile = path.join(dir, 'info.toml')
 
-    const info = toml.parse(
-      await fs.promises.readFile(infoFile, {encoding: 'utf-8'})
-    )
-    const timeoutSec = info['timelimit'] as number
     await core.group(`generate ${problemName}`, async () => {
       await exec('python3', ['./generate.py', infoFile], this.execOpts)
     })
@@ -281,17 +275,8 @@ export class LibraryChecker {
         const src = fs.createReadStream(inFile, {autoClose: true})
         const dest = fs.createWriteStream(gotFile, {autoClose: true})
 
-        const runPromise = runner(problemName, src, dest)
-        const ret = await Promise.race([
-          runPromise,
-          delay(timeoutSec * 1000 * 4, {value: -1})
-        ])
+        const ret = await runner(problemName, src, dest)
         if (ret !== 0) {
-          runPromise.cancel()
-          if (ret === -1)
-            throw new Error(
-              `${problemName}-${taskName}: Your command is timeout.`
-            )
           throw new Error(
             `${problemName}-${taskName}: Your command exit with code ${ret}`
           )
@@ -307,7 +292,7 @@ export class LibraryChecker {
         }
         core.info(`${problemName}-${taskName}: passed`)
       } catch (e) {
-        core.setFailed(e)
+        core.error(e.message)
       }
     }
 
