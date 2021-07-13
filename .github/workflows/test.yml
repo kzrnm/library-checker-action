@@ -27,5 +27,6 @@ jobs:
       - uses: actions/checkout@v2
       - uses: ./
         with:
-          list-problems: 'echo dummy aplusb many_aplusb'
+          command: 'python3 ${{ github.workspace }}/Samples/Python/main.py'
+          list-problems: 'echo aplusb many_aplusb'
           cache-test-data: true
