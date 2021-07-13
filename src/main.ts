@@ -151,7 +151,8 @@ async function run(): Promise<void> {
     await libraryChecker.updateCacheOf(problems)
 
     for (const p of problems) {
-      await libraryChecker.runProblem(p, async (n, input, out) =>
+      // eslint-disable-next-line @typescript-eslint/promise-function-async
+      await libraryChecker.runProblem(p, (n, input, out) =>
         commandRunner.runProblem(n, input, out)
       )
     }

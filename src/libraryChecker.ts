@@ -9,6 +9,7 @@ import {v1 as uuidv1} from 'uuid'
 import stringify from 'json-stable-stringify'
 import stream from 'stream'
 import delay from 'delay'
+import PCancelable from 'p-cancelable'
 
 export interface LibraryCheckerOptions {
   useCache?: boolean
@@ -250,7 +251,7 @@ export class LibraryChecker {
       name: string,
       input: Buffer,
       outStream: stream.Writable
-    ) => Promise<number>
+    ) => PCancelable<number>
   ): Promise<void> {
     const dir = await this.getProblemDirectory(problemName)
     const infoFile = path.join(dir, 'info.toml')
@@ -289,7 +290,7 @@ export class LibraryChecker {
           delay(timeoutSec * 1000, {value: -1})
         ])
         if (ret !== 0) {
-          dest.close()
+          runPromise.cancel()
           if (ret === -1)
             throw new Error(
               `${problemName}-${taskName}: Your command is timeout.`

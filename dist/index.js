@@ -6,6 +6,25 @@ require('./sourcemap-register.js');/******/ (() => { // webpackBootstrap
 
 "use strict";
 
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -20,54 +39,74 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CommandRunner = void 0;
-const exec_1 = __nccwpck_require__(1514);
-const stream_1 = __importDefault(__nccwpck_require__(2413));
+const tr = __importStar(__nccwpck_require__(8159));
 const delay_1 = __importDefault(__nccwpck_require__(86));
+const child_process_1 = __importDefault(__nccwpck_require__(3129));
+const p_cancelable_1 = __importDefault(__nccwpck_require__(9072));
 class CommandRunner {
     constructor(command) {
         this.command = command;
         this.hasSpecifiers = command.includes('%s');
     }
+    // eslint-disable-next-line @typescript-eslint/promise-function-async
     runCommand(name, options) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const makeCommand = () => {
-                if (this.hasSpecifiers)
-                    return [this.command.replace('%s', name), []];
-                else
-                    return [this.command, [name]];
-            };
-            const [command, args] = makeCommand();
-            return yield exec_1.exec(command, args, options);
+        const makeCommand = () => {
+            if (this.hasSpecifiers)
+                return [this.command.replace('%s', name), []];
+            else
+                return [this.command, [name]];
+        };
+        const [command, args] = makeCommand();
+        const commandArgs = tr.argStringToArray(command);
+        const actualCommand = commandArgs[0];
+        const actualArgs = commandArgs.slice(1).concat(args);
+        /* eslint-disable @typescript-eslint/no-explicit-any */
+        const runner = new tr.ToolRunner(actualCommand, actualArgs, options);
+        return new p_cancelable_1.default((resolve, reject, onCancel) => {
+            const optionsNonNull = runner._cloneExecOptions(options);
+            const fileName = runner._getSpawnFileName();
+            const cp = child_process_1.default.spawn(fileName, runner._getSpawnArgs(optionsNonNull), runner._getSpawnOptions(options, fileName));
+            onCancel(() => {
+                cp.kill('SIGKILL');
+            });
+            cp.stdout.on('data', (data) => {
+                optionsNonNull.outStream.write(data);
+            });
+            cp.on('error', (err) => {
+                reject(err);
+            });
+            cp.on('exit', (code) => {
+                resolve(code);
+            });
+            cp.on('close', (code) => {
+                resolve(code);
+            });
+            if (options.input) {
+                cp.stdin.end(options.input);
+            }
         });
+        /* eslint-enable @typescript-eslint/no-explicit-any */
     }
     skipTest(name) {
         return __awaiter(this, void 0, void 0, function* () {
-            const buf = new stream_1.default.Transform();
-            const ret = yield Promise.race([
-                delay_1.default(500),
-                this.runCommand(name, {
-                    outStream: buf,
-                    silent: true,
-                    delay: 0,
-                    ignoreReturnCode: true
-                })
-            ]);
-            buf.destroy();
+            const running = this.runCommand(name, {
+                silent: true,
+                delay: 0,
+                ignoreReturnCode: true
+            });
+            const ret = yield Promise.race([delay_1.default(500), running]);
+            running.cancel();
             return ret >= 0;
         });
     }
+    // eslint-disable-next-line @typescript-eslint/promise-function-async
     runProblem(name, input, outStream) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return yield this.runCommand(name, {
-                input,
-                silent: true,
-                outStream,
-                delay: 0,
-                listeners: {
-                    stdout: line => outStream.write(line, 'utf-8')
-                },
-                ignoreReturnCode: true
-            });
+        return this.runCommand(name, {
+            input,
+            silent: true,
+            outStream,
+            delay: 0,
+            ignoreReturnCode: true
         });
     }
 }
@@ -426,7 +465,7 @@ class LibraryChecker {
                         delay_1.default(timeoutSec * 1000, { value: -1 })
                     ]);
                     if (ret !== 0) {
-                        dest.close();
+                        runPromise.cancel();
                         if (ret === -1)
                             throw new Error(`${problemName}-${taskName}: Your command is timeout.`);
                         throw new Error(`${problemName}-${taskName}: Your command exit with code ${ret}`);
@@ -608,7 +647,8 @@ function run() {
             const problems = (_a = (yield getProblems(listProblemsCommand))) !== null && _a !== void 0 ? _a : (yield problemsWithSkip(commandRunner, Object.keys(allProblems)));
             yield libraryChecker.updateCacheOf(problems);
             for (const p of problems) {
-                yield libraryChecker.runProblem(p, (n, input, out) => __awaiter(this, void 0, void 0, function* () { return commandRunner.runProblem(n, input, out); }));
+                // eslint-disable-next-line @typescript-eslint/promise-function-async
+                yield libraryChecker.runProblem(p, (n, input, out) => commandRunner.runProblem(n, input, out));
             }
             yield libraryChecker.dispose();
         }
@@ -54202,6 +54242,125 @@ exports.Headers = Headers;
 exports.Request = Request;
 exports.Response = Response;
 exports.FetchError = FetchError;
+
+
+/***/ }),
+
+/***/ 9072:
+/***/ ((module) => {
+
+"use strict";
+
+
+class CancelError extends Error {
+	constructor(reason) {
+		super(reason || 'Promise was canceled');
+		this.name = 'CancelError';
+	}
+
+	get isCanceled() {
+		return true;
+	}
+}
+
+class PCancelable {
+	static fn(userFn) {
+		return (...arguments_) => {
+			return new PCancelable((resolve, reject, onCancel) => {
+				arguments_.push(onCancel);
+				// eslint-disable-next-line promise/prefer-await-to-then
+				userFn(...arguments_).then(resolve, reject);
+			});
+		};
+	}
+
+	constructor(executor) {
+		this._cancelHandlers = [];
+		this._isPending = true;
+		this._isCanceled = false;
+		this._rejectOnCancel = true;
+
+		this._promise = new Promise((resolve, reject) => {
+			this._reject = reject;
+
+			const onResolve = value => {
+				if (!this._isCanceled || !onCancel.shouldReject) {
+					this._isPending = false;
+					resolve(value);
+				}
+			};
+
+			const onReject = error => {
+				this._isPending = false;
+				reject(error);
+			};
+
+			const onCancel = handler => {
+				if (!this._isPending) {
+					throw new Error('The `onCancel` handler was attached after the promise settled.');
+				}
+
+				this._cancelHandlers.push(handler);
+			};
+
+			Object.defineProperties(onCancel, {
+				shouldReject: {
+					get: () => this._rejectOnCancel,
+					set: boolean => {
+						this._rejectOnCancel = boolean;
+					}
+				}
+			});
+
+			return executor(onResolve, onReject, onCancel);
+		});
+	}
+
+	then(onFulfilled, onRejected) {
+		// eslint-disable-next-line promise/prefer-await-to-then
+		return this._promise.then(onFulfilled, onRejected);
+	}
+
+	catch(onRejected) {
+		return this._promise.catch(onRejected);
+	}
+
+	finally(onFinally) {
+		return this._promise.finally(onFinally);
+	}
+
+	cancel(reason) {
+		if (!this._isPending || this._isCanceled) {
+			return;
+		}
+
+		this._isCanceled = true;
+
+		if (this._cancelHandlers.length > 0) {
+			try {
+				for (const handler of this._cancelHandlers) {
+					handler();
+				}
+			} catch (error) {
+				this._reject(error);
+				return;
+			}
+		}
+
+		if (this._rejectOnCancel) {
+			this._reject(new CancelError(reason));
+		}
+	}
+
+	get isCanceled() {
+		return this._isCanceled;
+	}
+}
+
+Object.setPrototypeOf(PCancelable.prototype, Promise.prototype);
+
+module.exports = PCancelable;
+module.exports.CancelError = CancelError;
 
 
 /***/ }),
