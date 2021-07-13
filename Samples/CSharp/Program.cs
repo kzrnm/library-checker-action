@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -19,7 +19,7 @@ class Program
 
         var solver = solvers.FirstOrDefault(s => s.Name == name);
         if (solver == null)
-            return 64; // if skip, exit with 64
+            return 64; // if you want skip a problem, exit before reading stdin
         solver.Solve(Console.OpenStandardInput(), Console.OpenStandardOutput());
         return 0;
     }

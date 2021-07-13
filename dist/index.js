@@ -16,18 +16,37 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.listProblems = void 0;
+exports.CommandRunner = void 0;
 const exec_1 = __nccwpck_require__(1514);
-function listProblems(command) {
-    return __awaiter(this, void 0, void 0, function* () {
-        if (!command) {
-            return [];
-        }
-        const execOutput = yield exec_1.getExecOutput(command, undefined, { silent: true });
-        return execOutput.stdout.split(/\s+/).filter(s => s.length > 0);
-    });
+class CommandRunner {
+    constructor(command) {
+        this.command = command;
+        this.hasSpecifiers = command.includes('%s');
+    }
+    runCommand(name, options) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const makeCommand = () => {
+                if (this.hasSpecifiers)
+                    return [this.command.replace('%s', name), []];
+                else
+                    return [this.command, [name]];
+            };
+            const [command, args] = makeCommand();
+            return yield exec_1.exec(command, args, options);
+        });
+    }
+    skipTest(name) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const timeout = new Promise(resolve => setTimeout(() => resolve(-1), 500));
+            const ret = yield Promise.race([
+                timeout,
+                this.runCommand(name, { silent: true, ignoreReturnCode: true })
+            ]);
+            return ret >= 0;
+        });
+    }
 }
-exports.listProblems = listProblems;
+exports.CommandRunner = CommandRunner;
 
 
 /***/ }),
@@ -250,13 +269,24 @@ class LibraryChecker {
             }
         });
     }
+    problemDirectory(name) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const pathes = yield (yield glob.create(path_1.default.join(this.libraryCheckerPath, '**', name))).glob();
+            if (pathes.length === 0)
+                throw new Error(`problem ${name} is not found`);
+            return pathes[0];
+        });
+    }
     updateCache() {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const targets = yield this.problems();
                 for (const [name] of Object.entries(targets)) {
-                    const checker = yield (yield glob.create(path_1.default.join(this.libraryCheckerPath, '**', name, 'checker'))).glob();
-                    if (checker.length === 0) {
+                    const checkerPath = path_1.default.join(yield this.problemDirectory(name), 'checker');
+                    try {
+                        fs_1.default.promises.stat(checkerPath);
+                    }
+                    catch (error) {
                         delete targets[name];
                     }
                 }
@@ -318,24 +348,18 @@ class LibraryChecker {
             }
         });
     }
-    generateCore(targetProblemNames, skipFunc) {
-        return __awaiter(this, void 0, void 0, function* () {
-            yield Promise.all(targetProblemNames.map((n) => __awaiter(this, void 0, void 0, function* () {
-                if (!skipFunc(n))
-                    yield exec_1.exec('python3', ['generate.py', '-p', n], this.execOpts);
-            })));
-        });
-    }
     /**
-     * generate problems
+     * update cache
      */
-    generate(problemNames, skipFunc) {
+    updateCacheOf(problemNames) {
         return __awaiter(this, void 0, void 0, function* () {
-            const { targets, addeds, notFounds } = yield this.checkCached(problemNames);
-            if (notFounds.length > 0) {
-                core.warning(`Problems are not found: ${notFounds.join(', ')}`);
-            }
-            yield core.group('generate problems', () => __awaiter(this, void 0, void 0, function* () {
+            if (this.options.useCache !== true)
+                return;
+            yield core.group('update caches', () => __awaiter(this, void 0, void 0, function* () {
+                const { targets, addeds, notFounds } = yield this.checkCached(problemNames);
+                if (notFounds.length > 0) {
+                    core.warning(`Problems are not found: ${notFounds.join(', ')}`);
+                }
                 const addedsSet = new Set(addeds);
                 const targetNames = Object.keys(targets);
                 const cached = targetNames.filter(n => !addedsSet.has(n));
@@ -346,8 +370,12 @@ class LibraryChecker {
                     core.debug('cached target is empty');
                 }
                 yield Promise.all(cached.map((n) => __awaiter(this, void 0, void 0, function* () { return yield this.updateTimestampOfCachedFile(n); })));
-                yield this.generateCore(targetNames, skipFunc);
             }));
+        });
+    }
+    runProblem(name) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield exec_1.exec('python3', ['./generate.py', '-p', name], this.execOpts);
         });
     }
     dispose() {
@@ -398,10 +426,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getListProblems = exports.printProblems = exports.checkout = exports.parseInput = void 0;
+exports.problemsWithSkip = exports.getProblems = exports.printProblems = exports.checkout = exports.parseInput = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const exec_1 = __nccwpck_require__(1514);
-const command = __importStar(__nccwpck_require__(524));
+const command_1 = __nccwpck_require__(524);
 const github_1 = __nccwpck_require__(5928);
 const libraryChecker_1 = __nccwpck_require__(4638);
 function parseBoolean(str) {
@@ -411,11 +439,13 @@ function parseBoolean(str) {
     return false;
 }
 function parseInput(getInputFunc) {
+    const command = getInputFunc('command', { required: true });
     const repositoryName = getInputFunc('repository-name');
     const commit = getInputFunc('commit');
     const listProblemsCommand = getInputFunc('list-problems');
     const cacheTestData = parseBoolean(getInputFunc('cache-test-data'));
     return {
+        command,
         repositoryName,
         commit: commit || undefined,
         listProblemsCommand: listProblemsCommand || undefined,
@@ -456,13 +486,19 @@ function printProblems(problems) {
     });
 }
 exports.printProblems = printProblems;
-function getListProblems(listProblemsCommand) {
+function getProblems(listProblemsCommand) {
     return __awaiter(this, void 0, void 0, function* () {
         if (!listProblemsCommand) {
             core.info('Skip list-problems. Check all problems');
             return null;
         }
-        const listProblems = yield command.listProblems(listProblemsCommand);
+        const listProblems = yield ((command) => __awaiter(this, void 0, void 0, function* () {
+            if (!command) {
+                return [];
+            }
+            const execOutput = yield exec_1.getExecOutput(command, undefined, { silent: true });
+            return execOutput.stdout.split(/\s+/).filter(s => s.length > 0);
+        }))(listProblemsCommand);
         if (listProblems.length > 0) {
             core.info(`list-problems: ${listProblems.join(', ')}`);
             return listProblems;
@@ -473,19 +509,35 @@ function getListProblems(listProblemsCommand) {
         }
     });
 }
-exports.getListProblems = getListProblems;
+exports.getProblems = getProblems;
+function problemsWithSkip(commandRunner, allProblemNames) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const skips = yield Promise.all(allProblemNames.map((v) => __awaiter(this, void 0, void 0, function* () { return commandRunner.skipTest(v); })));
+        const ret = [];
+        for (let i = 0; i < allProblemNames.length; i++) {
+            if (!skips[i])
+                ret.push(allProblemNames[i]);
+        }
+        return ret;
+    });
+}
+exports.problemsWithSkip = problemsWithSkip;
 function run() {
     var _a;
     return __awaiter(this, void 0, void 0, function* () {
         try {
             core.setCommandEcho(true);
-            const { repositoryName, commit, listProblemsCommand, cacheTestData } = parseInput(core.getInput);
+            const { command: targetCommand, repositoryName, commit, listProblemsCommand, cacheTestData } = parseInput(core.getInput);
             const libraryChecker = yield createLibraryChecker(repositoryName, commit, cacheTestData);
             yield libraryChecker.setup();
             const allProblems = yield libraryChecker.problems();
             yield printProblems(allProblems);
-            const listProblems = (_a = (yield getListProblems(listProblemsCommand))) !== null && _a !== void 0 ? _a : Object.keys(allProblems);
-            yield libraryChecker.generate(listProblems, () => false);
+            const commandRunner = new command_1.CommandRunner(targetCommand);
+            const problems = (_a = (yield getProblems(listProblemsCommand))) !== null && _a !== void 0 ? _a : (yield problemsWithSkip(commandRunner, Object.keys(allProblems)));
+            yield libraryChecker.updateCacheOf(problems);
+            for (const p of problems) {
+                yield libraryChecker.runProblem(p);
+            }
             yield libraryChecker.dispose();
         }
         catch (error) {

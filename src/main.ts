@@ -1,10 +1,11 @@
 import * as core from '@actions/core'
 import {getExecOutput} from '@actions/exec'
-import * as command from './command'
+import {CommandRunner} from './command'
 import {GitRepositoryCloner} from './github'
 import {LibraryChecker} from './libraryChecker'
 
 interface InputObject {
+  command: string
   repositoryName: string
   commit?: string
   listProblemsCommand?: string
@@ -24,11 +25,13 @@ export function parseInput(
     options?: core.InputOptions | undefined
   ) => string
 ): InputObject {
+  const command = getInputFunc('command', {required: true})
   const repositoryName = getInputFunc('repository-name')
   const commit = getInputFunc('commit')
   const listProblemsCommand = getInputFunc('list-problems')
   const cacheTestData = parseBoolean(getInputFunc('cache-test-data'))
   return {
+    command,
     repositoryName,
     commit: commit || undefined,
     listProblemsCommand: listProblemsCommand || undefined,
@@ -81,14 +84,21 @@ export async function printProblems(problems: {
   })
 }
 
-export async function getListProblems(
+export async function getProblems(
   listProblemsCommand?: string
 ): Promise<string[] | null> {
   if (!listProblemsCommand) {
     core.info('Skip list-problems. Check all problems')
     return null
   }
-  const listProblems = await command.listProblems(listProblemsCommand)
+  const listProblems = await (async (command?: string) => {
+    if (!command) {
+      return []
+    }
+    const execOutput = await getExecOutput(command, undefined, {silent: true})
+    return execOutput.stdout.split(/\s+/).filter(s => s.length > 0)
+  })(listProblemsCommand)
+
   if (listProblems.length > 0) {
     core.info(`list-problems: ${listProblems.join(', ')}`)
     return listProblems
@@ -98,11 +108,30 @@ export async function getListProblems(
   }
 }
 
+export async function problemsWithSkip(
+  commandRunner: CommandRunner,
+  allProblemNames: string[]
+): Promise<string[]> {
+  const skips = await Promise.all(
+    allProblemNames.map(async v => commandRunner.skipTest(v))
+  )
+  const ret: string[] = []
+  for (let i = 0; i < allProblemNames.length; i++) {
+    if (!skips[i]) ret.push(allProblemNames[i])
+  }
+  return ret
+}
+
 async function run(): Promise<void> {
   try {
     core.setCommandEcho(true)
-    const {repositoryName, commit, listProblemsCommand, cacheTestData} =
-      parseInput(core.getInput)
+    const {
+      command: targetCommand,
+      repositoryName,
+      commit,
+      listProblemsCommand,
+      cacheTestData
+    } = parseInput(core.getInput)
     const libraryChecker = await createLibraryChecker(
       repositoryName,
       commit,
@@ -113,10 +142,17 @@ async function run(): Promise<void> {
     const allProblems = await libraryChecker.problems()
     await printProblems(allProblems)
 
-    const listProblems =
-      (await getListProblems(listProblemsCommand)) ?? Object.keys(allProblems)
-    await libraryChecker.generate(listProblems, () => false)
+    const commandRunner = new CommandRunner(targetCommand)
 
+    const problems =
+      (await getProblems(listProblemsCommand)) ??
+      (await problemsWithSkip(commandRunner, Object.keys(allProblems)))
+
+    await libraryChecker.updateCacheOf(problems)
+
+    for (const p of problems) {
+      await libraryChecker.runProblem(p, commandRunner.runProblem)
+    }
     await libraryChecker.dispose()
   } catch (error) {
     core.setFailed(error.message)

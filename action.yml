@@ -2,6 +2,9 @@ name: 'Library Checker Action'
 description: 'This action runs yosupo06/library-checker-problems'
 author: 'naminodarie'
 inputs:
+  command:
+    required: true
+    description: "Command for library checker\nIf you want skip a problem, exit before reading stdin."
   repository-name:
     required: false
     description: 'library checcker repository'

@@ -14,6 +14,6 @@ int main(int argc, const char *argv[])
     }
     else
     {
-        return 64; // if skip, exit with 64
+        return 64; // if you want skip a problem, exit before reading stdin
     }
 }

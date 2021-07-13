@@ -1,10 +1,12 @@
 import * as main from '../src/main'
 import * as gh from '../src/github'
 import {getMockedLogger} from './util'
+import {CommandRunner} from '../src/command'
 
 describe('parseInput', () => {
   test('parse default', () => {
     const expected = {
+      command: '',
       repositoryName: '',
       commit: undefined,
       listProblemsCommand: undefined,
@@ -17,9 +19,28 @@ describe('parseInput', () => {
     input        | expectedInput
     ${undefined} | ${undefined}
     ${''}        | ${''}
+    ${'command'} | ${'command'}
+  `('parse command = $input', ({input, expectedInput}) => {
+    const expected = {
+      command: expectedInput,
+      repositoryName: '',
+      commit: undefined,
+      listProblemsCommand: undefined,
+      cacheTestData: false
+    }
+    expect(
+      main.parseInput(name => (name === 'command' ? input : ''))
+    ).toStrictEqual(expected)
+  })
+
+  test.each`
+    input        | expectedInput
+    ${undefined} | ${undefined}
+    ${''}        | ${''}
     ${'repo'}    | ${'repo'}
   `('parse repository-name = $input', ({input, expectedInput}) => {
     const expected = {
+      command: '',
       repositoryName: expectedInput,
       commit: undefined,
       listProblemsCommand: undefined,
@@ -37,6 +58,7 @@ describe('parseInput', () => {
     ${'012ABCD34'} | ${'012ABCD34'}
   `('parse commit = $input', ({input, expectedInput}) => {
     const expected = {
+      command: '',
       repositoryName: '',
       commit: expectedInput,
       listProblemsCommand: undefined,
@@ -57,6 +79,7 @@ describe('parseInput', () => {
     ${'true'}    | ${true}
   `('parse cache-test-data = $input', ({input, expectedInput}) => {
     const expected = {
+      command: '',
       repositoryName: '',
       commit: undefined,
       listProblemsCommand: undefined,
@@ -153,7 +176,7 @@ test('printProblems', async () => {
 describe('checkout library checker', () => {
   test('empty command', async () => {
     const mockedLogger = getMockedLogger()
-    expect(await main.getListProblems(``)).toBeNull()
+    expect(await main.getProblems(``)).toBeNull()
     expect(mockedLogger).toBeCalledTimes(1)
     expect(mockedLogger).toBeCalledWith(
       'info',
@@ -163,7 +186,7 @@ describe('checkout library checker', () => {
 
   test('echo empty', async () => {
     const mockedLogger = getMockedLogger()
-    expect(await main.getListProblems(`node -e "console.log("")"`)).toBeNull()
+    expect(await main.getProblems(`node -e "console.log("")"`)).toBeNull()
     expect(mockedLogger).toBeCalledTimes(1)
     expect(mockedLogger).toBeCalledWith(
       'warning',
@@ -174,7 +197,7 @@ describe('checkout library checker', () => {
   test('echo some problems', async () => {
     const mockedLogger = getMockedLogger()
     expect(
-      await main.getListProblems(
+      await main.getProblems(
         `node -e "console.log('aplusb many_aplusb');console.log('associative_array');"`
       )
     ).toStrictEqual(['aplusb', 'many_aplusb', 'associative_array'])
@@ -184,4 +207,21 @@ describe('checkout library checker', () => {
       'list-problems: aplusb, many_aplusb, associative_array'
     )
   })
+})
+
+test('problemsWithSkip', async () => {
+  const skips = new Set(['unionfind', 'zalgorithm'])
+  const commandRunner = new CommandRunner('dummy')
+  jest.spyOn(commandRunner, 'skipTest').mockImplementation(name => {
+    return Promise.resolve(skips.has(name))
+  })
+  expect(
+    await main.problemsWithSkip(commandRunner, [
+      'unionfind',
+      'many_aplusb',
+      'zalgorithm',
+      'aplusb'
+    ])
+  ).toEqual(['many_aplusb', 'aplusb'])
+  jest.clearAllMocks()
 })

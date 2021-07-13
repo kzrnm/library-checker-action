@@ -13,6 +13,6 @@ if name == '--list-tests':
 try:
     module = import_module(f'tests.{name}')
 except(Exception):
-    exit(64)  # if skip, exit with 64
+    exit(64)  # if you want skip a problem, exit before reading stdin
 
 module.main()

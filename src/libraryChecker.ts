@@ -1,11 +1,13 @@
 import * as cache from '@actions/cache'
 import * as core from '@actions/core'
 import * as glob from '@actions/glob'
+import * as toml from '@iarna/toml'
 import {exec, getExecOutput, ExecOptions} from '@actions/exec'
 import fs from 'fs'
 import path from 'path'
 import {v1 as uuidv1} from 'uuid'
 import stringify from 'json-stable-stringify'
+import stream from 'stream'
 
 export interface LibraryCheckerOptions {
   useCache?: boolean
@@ -128,16 +130,25 @@ export class LibraryChecker {
     }
   }
 
+  async getProblemDirectory(name: string): Promise<string> {
+    const pathes = await (
+      await glob.create(path.join(this.libraryCheckerPath, '**', name))
+    ).glob()
+    if (pathes.length === 0) throw new Error(`problem ${name} is not found`)
+    return pathes[0]
+  }
+
   private async updateCache(): Promise<void> {
     try {
       const targets = await this.problems()
       for (const [name] of Object.entries(targets)) {
-        const checker = await (
-          await glob.create(
-            path.join(this.libraryCheckerPath, '**', name, 'checker')
-          )
-        ).glob()
-        if (checker.length === 0) {
+        const checkerPath = path.join(
+          await this.getProblemDirectory(name),
+          'checker'
+        )
+        try {
+          fs.promises.stat(checkerPath)
+        } catch (error) {
           delete targets[name]
         }
       }
@@ -208,31 +219,17 @@ export class LibraryChecker {
     }
   }
 
-  async generateCore(
-    targetProblemNames: string[],
-    skipFunc: (problemName: string) => boolean
-  ): Promise<void> {
-    await Promise.all(
-      targetProblemNames.map(async n => {
-        if (!skipFunc(n))
-          await exec('python3', ['generate.py', '-p', n], this.execOpts)
-      })
-    )
-  }
-
   /**
-   * generate problems
+   * update cache
    */
-  async generate(
-    problemNames: string[],
-    skipFunc: (problemName: string) => boolean
-  ): Promise<void> {
-    const {targets, addeds, notFounds} = await this.checkCached(problemNames)
-    if (notFounds.length > 0) {
-      core.warning(`Problems are not found: ${notFounds.join(', ')}`)
-    }
+  async updateCacheOf(problemNames: string[]): Promise<void> {
+    if (this.options.useCache !== true) return
+    await core.group('update caches', async () => {
+      const {targets, addeds, notFounds} = await this.checkCached(problemNames)
+      if (notFounds.length > 0) {
+        core.warning(`Problems are not found: ${notFounds.join(', ')}`)
+      }
 
-    await core.group('generate problems', async () => {
       const addedsSet = new Set(addeds)
       const targetNames = Object.keys(targets)
       const cached = targetNames.filter(n => !addedsSet.has(n))
@@ -244,9 +241,82 @@ export class LibraryChecker {
       await Promise.all(
         cached.map(async n => await this.updateTimestampOfCachedFile(n))
       )
-
-      await this.generateCore(targetNames, skipFunc)
     })
+  }
+
+  async runProblem(
+    problemName: string,
+    runner: (
+      name: string,
+      input: Buffer,
+      outStream: stream.Writable
+    ) => Promise<number>
+  ): Promise<void> {
+    const dir = await this.getProblemDirectory(problemName)
+    const infoFile = path.join(dir, 'info.toml')
+
+    const info = toml.parse(
+      await fs.promises.readFile(infoFile, {encoding: 'utf-8'})
+    )
+    const timeoutSec = 5 * (info['timelimit'] as number)
+
+    await exec('python3', ['./generate.py', infoFile], this.execOpts)
+
+    const inDir = path.join(dir, 'in')
+    const outDir = path.join(dir, 'out')
+    const gotDir = path.join(dir, 'got')
+    const checker = path.join(dir, 'checker')
+    await fs.promises.mkdir(gotDir)
+
+    const run = async (taskName: string): Promise<void> => {
+      try {
+        const fileNameWithoutExtension = path.basename(taskName, '.in')
+        if (fileNameWithoutExtension === taskName) return
+        const inFile = path.join(inDir, taskName)
+        const outFile = path.join(outDir, `${fileNameWithoutExtension}.out`)
+        const gotFile = path.join(gotDir, `${fileNameWithoutExtension}.got`)
+
+        const dest = fs.createWriteStream(gotFile, {autoClose: true})
+
+        const runPromise = runner(
+          problemName,
+          await fs.promises.readFile(inFile),
+          dest
+        )
+        const timeout = new Promise<number>(resolve =>
+          setTimeout(() => resolve(-1), timeoutSec * 1000)
+        )
+        const ret = await Promise.race([runPromise, timeout])
+        if (ret !== 0) {
+          if (ret === -1)
+            throw new Error(
+              `${problemName}-${taskName}: Your command is timeout.`
+            )
+          throw new Error(
+            `${problemName}-${taskName}: Your command exit with code ${ret}`
+          )
+        }
+        const checkRet = await exec(checker, [inFile, outFile, gotFile], {
+          silent: true,
+          ...this.execOpts
+        })
+        if (checkRet !== 0) {
+          throw new Error(
+            `${problemName}-${taskName}: Checker exit with code ${ret}`
+          )
+        }
+        core.info(`${problemName}-${taskName}: passed`)
+      } catch (e) {
+        core.setFailed(e)
+      }
+    }
+
+    for (const dirent of await fs.promises.readdir(inDir, {
+      withFileTypes: true
+    })) {
+      if (!dirent.isFile()) continue
+      await run(dirent.name)
+    }
   }
 
   async dispose(): Promise<void> {

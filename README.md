@@ -1,4 +1,4 @@
-#  Library Checker Action
+# Library Checker Action
 
 This action runs [yosupo06/library-checker-problems](https://github.com/yosupo06/library-checker-problems).
 
@@ -6,9 +6,37 @@ This action runs [yosupo06/library-checker-problems](https://github.com/yosupo06
 
 ## Input
 
+### command
+
+**Required**
+
+Command for library checker.
+
+If your command contains `%s`, the action replace `%s` with a problem name If not, the action add a problem name to the command arguments.
+
+**_example_**
+
+- `command` = `./run.py`
+
+```sh
+./run.py aplusb
+./run.py unionfind
+# Run others....
+```
+
+- `command` = `./run.py -name %s -s %s`
+
+```sh
+./run.py -name aplusb -s aplusb
+./run.py -name unionfind -s unionfind
+# Run others....
+```
+
+If you want skip a problem, exit before reading stdin.
+
 ### repository-name
 
-**Option** 
+**Option**
 
 Repository name of library-checker
 
@@ -16,7 +44,7 @@ default: `yosupo06/library-checker-problems`
 
 ### commit
 
-**Option** 
+**Option**
 
 revision/branch/tag
 
@@ -24,7 +52,7 @@ default: HEAD
 
 ### list-problems
 
-**Option** 
+**Option**
 
 Command that lists the problems to check.
 
@@ -34,7 +62,7 @@ If the output is empty, this action checks all problems.
 
 ### cache-test-data
 
-**Option** 
+**Option**
 
 If true, the action cache test datas.
 
@@ -43,12 +71,11 @@ If true, the action cache test datas.
 
 ## Output
 
-
 ## Usage
 
 ```yml
-      - uses: naminodarie/library-checker-actions@v1
-        id: get-version
-        with:
-          commit: 0e6c8e1b809f67a5e0685a5de03d3f313a10475f
+- uses: naminodarie/library-checker-actions@v1
+  id: get-version
+  with:
+    commit: 0e6c8e1b809f67a5e0685a5de03d3f313a10475f
 ```
