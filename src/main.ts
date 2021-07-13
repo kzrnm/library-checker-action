@@ -113,7 +113,7 @@ export async function problemsWithSkip(
   allProblemNames: string[]
 ): Promise<string[]> {
   const skips = await Promise.all(
-    allProblemNames.map(async v => commandRunner.skipTest(v))
+    allProblemNames.map(v => commandRunner.skipTest(v))
   )
   const ret: string[] = []
   for (let i = 0; i < allProblemNames.length; i++) {

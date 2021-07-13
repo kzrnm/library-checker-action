@@ -147,7 +147,7 @@ export class LibraryChecker {
   async setup(): Promise<void> {
     await core.group('setup Library Checker', async () => {
       if (this.options.useCache) {
-        this.restoreCache()
+        await this.restoreCache()
       }
       await exec(
         'pip3',
@@ -257,7 +257,7 @@ export class LibraryChecker {
     const info = toml.parse(
       await fs.promises.readFile(infoFile, {encoding: 'utf-8'})
     )
-    const timeoutSec = 1000 * (info['timelimit'] as number)
+    const timeoutSec = info['timelimit'] as number
     core.group(`generate ${problemName}`, async () => {
       await exec('python3', ['./generate.py', infoFile], this.execOpts)
     })

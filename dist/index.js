@@ -299,7 +299,7 @@ class LibraryChecker {
         return __awaiter(this, void 0, void 0, function* () {
             yield core.group('setup Library Checker', () => __awaiter(this, void 0, void 0, function* () {
                 if (this.options.useCache) {
-                    this.restoreCache();
+                    yield this.restoreCache();
                 }
                 yield exec_1.exec('pip3', ['install', '--user', '-r', 'requirements.txt'], this.execOpts);
                 if (process.platform !== 'win32' && process.platform !== 'darwin') {
@@ -386,7 +386,7 @@ class LibraryChecker {
             const dir = yield this.getProblemDirectory(problemName);
             const infoFile = path_1.default.join(dir, 'info.toml');
             const info = toml.parse(yield fs_1.default.promises.readFile(infoFile, { encoding: 'utf-8' }));
-            const timeoutSec = 1000 * info['timelimit'];
+            const timeoutSec = info['timelimit'];
             core.group(`generate ${problemName}`, () => __awaiter(this, void 0, void 0, function* () {
                 yield exec_1.exec('python3', ['./generate.py', infoFile], this.execOpts);
             }));
@@ -565,7 +565,7 @@ function getProblems(listProblemsCommand) {
 exports.getProblems = getProblems;
 function problemsWithSkip(commandRunner, allProblemNames) {
     return __awaiter(this, void 0, void 0, function* () {
-        const skips = yield Promise.all(allProblemNames.map((v) => __awaiter(this, void 0, void 0, function* () { return commandRunner.skipTest(v); })));
+        const skips = yield Promise.all(allProblemNames.map(v => commandRunner.skipTest(v)));
         const ret = [];
         for (let i = 0; i < allProblemNames.length; i++) {
             if (!skips[i])
