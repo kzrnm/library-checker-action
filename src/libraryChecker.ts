@@ -259,7 +259,7 @@ export class LibraryChecker {
       await fs.promises.readFile(infoFile, {encoding: 'utf-8'})
     )
     const timeoutSec = info['timelimit'] as number
-    core.group(`generate ${problemName}`, async () => {
+    await core.group(`generate ${problemName}`, async () => {
       await exec('python3', ['./generate.py', infoFile], this.execOpts)
     })
 
