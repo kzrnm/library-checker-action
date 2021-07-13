@@ -90,32 +90,6 @@ export class LibraryChecker {
     return result
   }
 
-  async checkCached(problemNames: string[]): Promise<{
-    targets: {[name: string]: string | undefined}
-    addeds: string[]
-    notFounds: string[]
-  }> {
-    const current: {[name: string]: string | undefined} = await this.problems()
-    const cached: {[name: string]: string | undefined} =
-      await this.cachedProblems()
-
-    const targets: {[name: string]: string | undefined} = {}
-    const addeds: string[] = []
-    const notFounds: string[] = []
-    for (const name of problemNames) {
-      const version = current[name]
-      if (version) {
-        targets[name] = version
-        if (version !== cached[name]) {
-          addeds.push(name)
-        }
-      } else {
-        notFounds.push(name)
-      }
-    }
-    return {targets, addeds, notFounds}
-  }
-
   private async restoreCache(): Promise<void> {
     const cacheKey = await cache.restoreCache(
       this.getCachePath(),
@@ -223,23 +197,48 @@ export class LibraryChecker {
    * update cache
    */
   async updateCacheOf(problemNames: string[]): Promise<void> {
+    const checkCached = async (): Promise<{
+      exists: string[]
+      addeds: string[]
+      notFounds: string[]
+    }> => {
+      const current: {[name: string]: string | undefined} =
+        await this.problems()
+      const cached: {[name: string]: string | undefined} =
+        await this.cachedProblems()
+
+      const exists: string[] = []
+      const addeds: string[] = []
+      const notFounds: string[] = []
+      for (const name of problemNames) {
+        const version = current[name]
+        if (version) {
+          if (version !== cached[name]) {
+            addeds.push(name)
+          } else {
+            exists.push(name)
+          }
+        } else {
+          notFounds.push(name)
+        }
+      }
+      return {exists, addeds, notFounds}
+    }
+
     if (this.options.useCache !== true) return
     await core.group('update caches', async () => {
-      const {targets, addeds, notFounds} = await this.checkCached(problemNames)
+      const {exists, notFounds} = await checkCached()
       if (notFounds.length > 0) {
         core.warning(`Problems are not found: ${notFounds.join(', ')}`)
       }
 
-      const addedsSet = new Set(addeds)
-      const targetNames = Object.keys(targets)
-      const cached = targetNames.filter(n => !addedsSet.has(n))
-      if (cached.length > 0) {
-        core.debug(`cached: ${cached.join(', ')}`)
+      if (exists.length > 0) {
+        core.debug(`cached: ${exists.join(', ')}`)
       } else {
         core.debug('cached target is empty')
       }
       await Promise.all(
-        cached.map(async n => await this.updateTimestampOfCachedFile(n))
+        exists.map(async n => await this.updateTimestampOfCachedFile(n))
       )
     })
   }

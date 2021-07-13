@@ -246,28 +246,6 @@ class LibraryChecker {
         }
         return result;
     }
-    checkCached(problemNames) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const current = yield this.problems();
-            const cached = yield this.cachedProblems();
-            const targets = {};
-            const addeds = [];
-            const notFounds = [];
-            for (const name of problemNames) {
-                const version = current[name];
-                if (version) {
-                    targets[name] = version;
-                    if (version !== cached[name]) {
-                        addeds.push(name);
-                    }
-                }
-                else {
-                    notFounds.push(name);
-                }
-            }
-            return { targets, addeds, notFounds };
-        });
-    }
     restoreCache() {
         return __awaiter(this, void 0, void 0, function* () {
             const cacheKey = yield cache.restoreCache(this.getCachePath(), this.getCacheKey(), this.restoreCacheKey());
@@ -364,23 +342,42 @@ class LibraryChecker {
      */
     updateCacheOf(problemNames) {
         return __awaiter(this, void 0, void 0, function* () {
+            const checkCached = () => __awaiter(this, void 0, void 0, function* () {
+                const current = yield this.problems();
+                const cached = yield this.cachedProblems();
+                const exists = [];
+                const addeds = [];
+                const notFounds = [];
+                for (const name of problemNames) {
+                    const version = current[name];
+                    if (version) {
+                        if (version !== cached[name]) {
+                            addeds.push(name);
+                        }
+                        else {
+                            exists.push(name);
+                        }
+                    }
+                    else {
+                        notFounds.push(name);
+                    }
+                }
+                return { exists, addeds, notFounds };
+            });
             if (this.options.useCache !== true)
                 return;
             yield core.group('update caches', () => __awaiter(this, void 0, void 0, function* () {
-                const { targets, addeds, notFounds } = yield this.checkCached(problemNames);
+                const { exists, notFounds } = yield checkCached();
                 if (notFounds.length > 0) {
                     core.warning(`Problems are not found: ${notFounds.join(', ')}`);
                 }
-                const addedsSet = new Set(addeds);
-                const targetNames = Object.keys(targets);
-                const cached = targetNames.filter(n => !addedsSet.has(n));
-                if (cached.length > 0) {
-                    core.debug(`cached: ${cached.join(', ')}`);
+                if (exists.length > 0) {
+                    core.debug(`cached: ${exists.join(', ')}`);
                 }
                 else {
                     core.debug('cached target is empty');
                 }
-                yield Promise.all(cached.map((n) => __awaiter(this, void 0, void 0, function* () { return yield this.updateTimestampOfCachedFile(n); })));
+                yield Promise.all(exists.map((n) => __awaiter(this, void 0, void 0, function* () { return yield this.updateTimestampOfCachedFile(n); })));
             }));
         });
     }
@@ -590,7 +587,7 @@ function run() {
             const problems = (_a = (yield getProblems(listProblemsCommand))) !== null && _a !== void 0 ? _a : (yield problemsWithSkip(commandRunner, Object.keys(allProblems)));
             yield libraryChecker.updateCacheOf(problems);
             for (const p of problems) {
-                yield libraryChecker.runProblem(p, (n, input, out) => commandRunner.runProblem(n, input, out));
+                yield libraryChecker.runProblem(p, (n, input, out) => __awaiter(this, void 0, void 0, function* () { return commandRunner.runProblem(n, input, out); }));
             }
             yield libraryChecker.dispose();
         }
