@@ -38,7 +38,7 @@
     "delay": "^5.0.0",
     "git-clone": "^0.1.0",
     "json-stable-stringify": "^1.0.1",
-    "p-cancelable": "^2.1.1",
+    "p-cancelable": "^3.0.0",
     "uuid": "^8.3.2"
   },
   "devDependencies": {
